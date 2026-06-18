@@ -592,16 +592,24 @@ function getManualTasks() {
 function getVisibleTasks() {
   const ordered = getManualTasks();
   if (state.sort.key === "order") return ordered;
-  const sorted = [...ordered].sort(compareTasks);
-  if (state.sort.direction === "desc") sorted.reverse();
-  return sorted;
+  
+  // Separate incomplete and completed tasks
+  const incomplete = ordered.filter(t => !t.completed);
+  const completed = ordered.filter(t => t.completed);
+  
+  // Sort incomplete tasks by the chosen criteria
+  incomplete.sort(compareTasks);
+  if (state.sort.direction === "desc") incomplete.reverse();
+  
+  // Sort completed tasks similarly
+  completed.sort(compareTasks);
+  if (state.sort.direction === "desc") completed.reverse();
+  
+  // Return incomplete + completed (completed always at bottom)
+  return [...incomplete, ...completed];
 }
 
 function compareTasks(a, b) {
-  // Completed tasks always go to bottom
-  if (a.completed && !b.completed) return 1;
-  if (!a.completed && b.completed) return -1;
-  
   if (state.sort.key === "priority") return (PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]) || a.order - b.order;
   if (state.sort.key === "dueDate")  return a.dueDate.localeCompare(b.dueDate) || a.order - b.order;
   return a.group.localeCompare(b.group, undefined, { sensitivity: "base" }) || a.order - b.order;
