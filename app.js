@@ -116,7 +116,7 @@ function handleTaskSubmit(event) {
     order:     state.tasks.length
   };
   if (!task.title || !task.group || !task.dueDate) return;
-  state.tasks.push(task);
+  state.tasks = insertTaskByCurrentSort(task);
   autoRegisterGroup(groupName).then(() => syncTasks()).then(() => {
     renderTasks();
     form.reset();
@@ -156,14 +156,7 @@ function handleTableChange(event) {
   if (el.classList.contains("task-complete")) {
     task.completed = el.checked;
     row.classList.toggle("is-complete", task.completed);
-    if (task.completed) {
-      // Move to bottom: give it an order higher than all incomplete tasks
-      const ordered = getManualTasks();
-      const others  = ordered.filter(t => t.id !== task.id);
-      others.push(task);
-      others.forEach((t, i) => { t.order = i; });
-      state.tasks = others;
-    }
+    state.tasks = positionTaskByCurrentSort(task);
     syncTasks().then(renderTasks);
     return;
   }
@@ -589,24 +582,48 @@ function getManualTasks() {
   return [...state.tasks].sort((a, b) => a.order - b.order);
 }
 
+function sortTaskSubset(tasks) {
+  const sorted = [...tasks].sort(compareTasks);
+  if (state.sort.direction === "desc") sorted.reverse();
+  return sorted;
+}
+
+function reindexTasks(tasks) {
+  return tasks.map((task, index) => ({ ...task, order: index }));
+}
+
+function positionTaskByCurrentSort(task) {
+  const ordered = getManualTasks().filter(t => t.id !== task.id);
+  const incomplete = ordered.filter(t => !t.completed);
+  const completed = ordered.filter(t => t.completed);
+
+  if (task.completed) {
+    if (state.sort.key === "order") {
+      return reindexTasks([...incomplete, ...completed, task]);
+    }
+
+    return reindexTasks([...sortTaskSubset(incomplete), ...sortTaskSubset([...completed, task])]);
+  }
+
+  if (state.sort.key === "order") {
+    return reindexTasks([...incomplete, task, ...completed]);
+  }
+
+  return reindexTasks([...sortTaskSubset([...incomplete, task]), ...completed]);
+}
+
+function insertTaskByCurrentSort(task) {
+  return positionTaskByCurrentSort(task);
+}
+
 function getVisibleTasks() {
   const ordered = getManualTasks();
   if (state.sort.key === "order") return ordered;
-  
-  // Separate incomplete and completed tasks
+
   const incomplete = ordered.filter(t => !t.completed);
   const completed = ordered.filter(t => t.completed);
-  
-  // Sort incomplete tasks by the chosen criteria
-  incomplete.sort(compareTasks);
-  if (state.sort.direction === "desc") incomplete.reverse();
-  
-  // Sort completed tasks similarly
-  completed.sort(compareTasks);
-  if (state.sort.direction === "desc") completed.reverse();
-  
-  // Return incomplete + completed (completed always at bottom)
-  return [...incomplete, ...completed];
+
+  return [...sortTaskSubset(incomplete), ...sortTaskSubset(completed)];
 }
 
 function compareTasks(a, b) {
