@@ -154,7 +154,7 @@ h1 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.8rem); line-height: 1; }
   text-align: left; background: rgba(56,60,95,0.8); border-bottom: 1px solid var(--line-strong);
   overflow: hidden; white-space: nowrap; user-select: none;
 }
-.task-table tbody td { padding: 10px 12px; border-bottom: 1px solid var(--line); color: var(--text-soft); vertical-align: middle; overflow: hidden; }
+.task-table tbody td { padding: 6px 10px; border-bottom: 1px solid var(--line); color: var(--text-soft); vertical-align: middle; overflow: hidden; }
 .task-table th, .task-table td { border-right: 1px solid var(--line); }
 .task-table th:last-child, .task-table td:last-child { border-right: none; }
 .task-table tbody tr { background: rgba(52,55,88,0.58); }
@@ -162,7 +162,7 @@ h1 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.8rem); line-height: 1; }
 
 /* Drag column */
 .drag-th, .drag-col { width: 36px; padding: 0 !important; text-align: center; }
-.drag-handle { display: inline-block; font-size: 1.2rem; color: var(--text-muted); cursor: grab; padding: 4px 8px; line-height: 1; user-select: none; }
+.drag-handle { display: inline-block; font-size: 1.1rem; color: var(--text-muted); cursor: grab; padding: 2px 6px; line-height: 1; user-select: none; }
 .drag-handle:active { cursor: grabbing; }
 .row-dragging { opacity: 0.35; }
 .drop-above td { border-top: 2px solid rgba(131,154,242,0.85) !important; }
@@ -187,25 +187,25 @@ h1 { margin: 0; font-size: clamp(1.8rem, 3vw, 2.8rem); line-height: 1; }
 .checkbox-column { width: 48px; text-align: center; }
 .checkbox-wrap { display: inline-grid; place-items: center; position: relative; }
 .checkbox-wrap input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
-.checkbox-wrap span { width: 24px; height: 24px; border-radius: 6px; border: 1px solid rgba(221,225,255,0.48); background: rgba(26,29,48,0.6); }
+.checkbox-wrap span { width: 20px; height: 20px; border-radius: 6px; border: 1px solid rgba(221,225,255,0.48); background: rgba(26,29,48,0.6); }
 .checkbox-wrap input:checked + span { background: linear-gradient(135deg,#88d08c,#5da96d); border-color: transparent; box-shadow: inset 0 0 0 4px rgba(24,27,44,0.54); }
 
 /* Inline inputs */
 .task-title-cell { display: flex; align-items: center; }
-.task-input { width: 100%; min-width: 0; padding: 8px 10px; color: var(--text); background: rgba(17,20,37,0.55); border: 1px solid transparent; border-radius: var(--radius-sm); outline: none; }
+.task-input { width: 100%; min-width: 0; padding: 6px 8px; color: var(--text); background: rgba(17,20,37,0.55); border: 1px solid transparent; border-radius: var(--radius-sm); outline: none; }
 .task-input:focus { border-color: rgba(157,167,241,0.75); box-shadow: 0 0 0 3px rgba(127,135,205,0.2); background: rgba(16,20,36,0.92); }
-.task-title-input { font-size: 1rem; }
+.task-title-input { font-size: 0.95rem; }
 tr.is-complete .task-title-input, tr.is-complete .task-group-input, tr.is-complete .task-date-input { color: var(--text-muted); text-decoration: line-through; }
 
 /* Group / due cells */
-.group-cell, .due-cell { display: flex; align-items: center; gap: 8px; }
+.group-cell, .due-cell { display: flex; align-items: center; gap: 6px; }
 .group-dot, .due-indicator { width: 10px; height: 10px; border-radius: 999px; flex: 0 0 auto; }
 .due-indicator { border: 2px solid rgba(238,241,255,0.78); background: transparent; position: relative; }
 .due-indicator::after { content: ""; position: absolute; inset: 2px; border-radius: 999px; background: conic-gradient(from 180deg, rgba(238,241,255,0.9) var(--progress,35%), transparent 0); }
 
 /* Priority select */
 .priority-select {
-  width: 100%; min-width: 100px; height: 40px; padding: 0 28px 0 12px;
+  width: 100%; min-width: 100px; height: 34px; padding: 0 28px 0 10px;
   color: #f7f8ff; border: 1px solid transparent; border-radius: var(--radius-sm);
   outline: none; cursor: pointer; appearance: none;
   background-image: linear-gradient(45deg,transparent 50%,rgba(255,255,255,0.85) 50%), linear-gradient(135deg,rgba(255,255,255,0.85) 50%,transparent 50%);
@@ -222,7 +222,7 @@ tr.is-complete .task-title-input, tr.is-complete .task-group-input, tr.is-comple
 .priority-select option { background: #1a1d30; color: var(--text); }
 
 /* Icon button */
-.icon-button { width: 30px; height: 30px; display: grid; place-items: center; background: rgba(255,255,255,0.04); border-color: rgba(196,201,240,0.16); }
+.icon-button { width: 28px; height: 28px; display: grid; place-items: center; background: rgba(255,255,255,0.04); border-color: rgba(196,201,240,0.16); }
 .icon-button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 .icon-button.danger:hover { background: rgba(239,91,103,0.18); border-color: rgba(239,91,103,0.3); }
 
