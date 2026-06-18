@@ -31,7 +31,8 @@ const groupInput        = document.querySelector("#task-group");
 const dueDateInput      = document.querySelector("#task-due-date");
 const priorityInput     = document.querySelector("#task-priority");
 const tableBody         = document.querySelector("#task-table-body");
-const taskCount         = document.querySelector("#task-count");
+const taskCount             = document.querySelector("#task-count");
+const deleteCompletedBtn    = document.querySelector("#delete-completed-btn");
 const rowTemplate       = document.querySelector("#task-row-template");
 const storageStatus     = document.querySelector("#storage-status");
 const sortButtons       = Array.from(document.querySelectorAll(".sort-button"));
@@ -82,7 +83,8 @@ async function initializeApp() {
 
 function attachEventListeners() {
   form.addEventListener("submit", handleTaskSubmit);
-  tableBody.addEventListener("click",     handleTableClick);
+  tableBody.addEventListener("click",         handleTableClick);
+  deleteCompletedBtn.addEventListener("click", handleDeleteCompleted);
   tableBody.addEventListener("change",    handleTableChange);
   tableBody.addEventListener("mousedown", (e) => { dragHandleActive = !!e.target.closest(".drag-handle"); });
   tableBody.addEventListener("dragstart", handleDragStart);
@@ -135,6 +137,15 @@ function handleTableClick(event) {
   syncTasks().then(renderTasks);
 }
 
+function handleDeleteCompleted() {
+  const count = state.tasks.filter(t => t.completed).length;
+  if (!count) return;
+  if (!confirm(`Delete ${count} completed task${count === 1 ? "" : "s"}? This cannot be undone.`)) return;
+  state.tasks = state.tasks.filter(t => !t.completed);
+  state.tasks.forEach((t, i) => { t.order = i; });
+  syncTasks().then(renderTasks);
+}
+
 function handleTableChange(event) {
   const el = event.target;
   const row = el.closest("tr[data-task-id]");
@@ -145,7 +156,15 @@ function handleTableChange(event) {
   if (el.classList.contains("task-complete")) {
     task.completed = el.checked;
     row.classList.toggle("is-complete", task.completed);
-    syncTasks();
+    if (task.completed) {
+      // Move to bottom: give it an order higher than all incomplete tasks
+      const ordered = getManualTasks();
+      const others  = ordered.filter(t => t.id !== task.id);
+      others.push(task);
+      others.forEach((t, i) => { t.order = i; });
+      state.tasks = others;
+    }
+    syncTasks().then(renderTasks);
     return;
   }
 
@@ -456,7 +475,14 @@ function renderTasks() {
 
     tableBody.appendChild(frag);
   }
-  taskCount.textContent = `${state.tasks.length} task${state.tasks.length === 1 ? "" : "s"}`;
+  const completedCount = state.tasks.filter(t => t.completed).length;
+  const totalCount     = state.tasks.length;
+  taskCount.textContent = completedCount
+    ? `${totalCount} task${totalCount === 1 ? "" : "s"} · ${completedCount} completed`
+    : `${totalCount} task${totalCount === 1 ? "" : "s"}`;
+  if (deleteCompletedBtn) {
+    deleteCompletedBtn.hidden = completedCount === 0;
+  }
 }
 
 // ── COLUMN RESIZE ─────────────────────────────────────────────────────────────
