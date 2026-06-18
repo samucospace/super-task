@@ -1,0 +1,153 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Task</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+
+    <section class="hero-panel">
+      <div class="hero-left">
+        <p class="eyebrow">Local task board</p>
+        <h1>Super Task</h1>
+      </div>
+      <div class="hero-right">
+        <span class="status-pill" id="storage-status">Loading storage...</span>
+        <div class="hero-buttons">
+          <button class="ghost-button" id="toggle-groups-btn" type="button">Groups &#9660;</button>
+          <button class="ghost-button" id="export-btn" type="button">Export backup</button>
+          <label class="ghost-button import-label">Import backup<input type="file" id="import-file" accept=".json"></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="groups-panel" id="groups-panel" hidden>
+      <div class="groups-panel-head">
+        <span class="groups-panel-title">Manage Groups</span>
+        <form class="add-group-form" id="add-group-form">
+          <input type="text" id="new-group-name" maxlength="80" placeholder="New group name">
+          <button type="submit" class="small-button">Add</button>
+        </form>
+      </div>
+      <div class="groups-list" id="groups-list"></div>
+    </section>
+
+    <section class="composer-panel">
+      <form id="task-form" class="task-form">
+        <label>
+          <span>Task</span>
+          <input id="task-title" name="title" type="text" maxlength="120" placeholder="Add a new task" required>
+        </label>
+        <label>
+          <span>Group</span>
+          <input id="task-group" name="group" type="text" maxlength="80" placeholder="Select or type group" list="group-datalist" required>
+          <datalist id="group-datalist"></datalist>
+        </label>
+        <label>
+          <span>Due date</span>
+          <input id="task-due-date" name="dueDate" type="date" required>
+        </label>
+        <label>
+          <span>Priority</span>
+          <select id="task-priority" name="priority">
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low" selected>Low</option>
+            <option value="None">None</option>
+          </select>
+        </label>
+        <button class="primary-button" type="submit">Add task</button>
+      </form>
+    </section>
+
+    <section class="board-panel">
+      <div class="table-frame">
+        <table class="task-table" id="task-table" aria-label="Tasks">
+          <colgroup>
+            <col id="col-drag" style="width:36px">
+            <col id="col-check" style="width:48px">
+            <col id="col-item">
+            <col id="col-group">
+            <col id="col-due">
+            <col id="col-priority">
+            <col id="col-delete" style="width:52px">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="drag-th"></th>
+              <th class="checkbox-column"></th>
+              <th data-col="col-item">
+                Item
+                <div class="resize-handle" data-col="col-item"></div>
+              </th>
+              <th data-col="col-group">
+                <button class="sort-button" type="button" data-sort-key="group">Group <span class="sort-indicator" aria-hidden="true"></span></button>
+                <div class="resize-handle" data-col="col-group"></div>
+              </th>
+              <th data-col="col-due">
+                <button class="sort-button" type="button" data-sort-key="dueDate">Due date <span class="sort-indicator" aria-hidden="true"></span></button>
+                <div class="resize-handle" data-col="col-due"></div>
+              </th>
+              <th data-col="col-priority">
+                <button class="sort-button" type="button" data-sort-key="priority">Priority <span class="sort-indicator" aria-hidden="true"></span></button>
+                <div class="resize-handle" data-col="col-priority"></div>
+              </th>
+              <th class="delete-th"></th>
+            </tr>
+          </thead>
+          <tbody id="task-table-body"></tbody>
+        </table>
+      </div>
+      <div class="table-footer">
+        <span id="task-count">0 tasks</span>
+      </div>
+    </section>
+
+  </main>
+
+  <template id="task-row-template">
+    <tr>
+      <td class="drag-col"><span class="drag-handle" title="Drag to reorder">&#8942;</span></td>
+      <td class="checkbox-column">
+        <label class="checkbox-wrap">
+          <input class="task-complete" type="checkbox" aria-label="Mark task complete">
+          <span></span>
+        </label>
+      </td>
+      <td>
+        <div class="task-title-cell">
+          <input class="task-input task-title-input task-field" type="text" maxlength="120" data-field="title" aria-label="Task title">
+        </div>
+      </td>
+      <td>
+        <div class="group-cell">
+          <span class="group-dot"></span>
+          <input class="task-input task-group-input task-field" type="text" maxlength="80" data-field="group" aria-label="Task group" list="group-datalist">
+        </div>
+      </td>
+      <td>
+        <div class="due-cell">
+          <span class="due-indicator"></span>
+          <input class="task-input task-date-input task-field" type="date" data-field="dueDate" aria-label="Task due date">
+        </div>
+      </td>
+      <td>
+        <select class="priority-select task-field" data-field="priority" aria-label="Task priority">
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+          <option value="None">None</option>
+        </select>
+      </td>
+      <td class="delete-col">
+        <button class="icon-button delete-task danger" type="button" aria-label="Delete task">&#x2715;</button>
+      </td>
+    </tr>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
