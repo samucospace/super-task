@@ -628,7 +628,7 @@ function getVisibleTasks() {
 
 function compareTasks(a, b) {
   if (state.sort.key === "priority") return (PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]) || a.order - b.order;
-  if (state.sort.key === "dueDate")  return a.dueDate.localeCompare(b.dueDate) || a.order - b.order;
+  if (state.sort.key === "dueDate")  return a.dueDate.localeCompare(b.dueDate) || (PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]) || a.order - b.order;
   return a.group.localeCompare(b.group, undefined, { sensitivity: "base" }) || a.order - b.order;
 }
 
