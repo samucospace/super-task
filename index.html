@@ -65,6 +65,19 @@
             <option value="None">None</option>
           </select>
         </label>
+        <label class="task-notes-create-wrap">
+          <span>Notes</span>
+          <div class="notes-cell composer-notes-cell">
+            <span id="composer-notes-preview" class="notes-preview is-empty" tabindex="0" role="button" aria-label="Open notes editor">No notes</span>
+            <div id="composer-notes-editor" class="notes-editor" hidden>
+              <textarea id="task-notes" name="notes" class="task-notes-text" maxlength="1000" rows="8" placeholder="Optional notes (up to 1000 characters)"></textarea>
+              <div class="notes-editor-footer">
+                <span id="composer-notes-count" class="notes-count">0/1000</span>
+                <button class="small-button composer-notes-done-btn" type="button">Done</button>
+              </div>
+            </div>
+          </div>
+        </label>
         <button class="primary-button" type="submit">Add task</button>
       </form>
     </section>
@@ -79,6 +92,7 @@
             <col id="col-group">
             <col id="col-due">
             <col id="col-priority">
+            <col id="col-notes">
             <col id="col-delete" style="width:52px">
           </colgroup>
           <thead>
@@ -100,6 +114,10 @@
               <th data-col="col-priority">
                 <button class="sort-button" type="button" data-sort-key="priority">Priority <span class="sort-indicator" aria-hidden="true"></span></button>
                 <div class="resize-handle" data-col="col-priority"></div>
+              </th>
+              <th data-col="col-notes">
+                Notes
+                <div class="resize-handle" data-col="col-notes"></div>
               </th>
               <th class="delete-th"></th>
             </tr>
@@ -148,6 +166,18 @@
           <option value="Low">Low</option>
           <option value="None">None</option>
         </select>
+      </td>
+      <td>
+        <div class="notes-cell">
+          <span class="notes-preview" tabindex="0" role="button" aria-label="Open notes editor"></span>
+          <div class="notes-editor" hidden>
+            <textarea class="task-notes-text" maxlength="1000" rows="8" aria-label="Task notes"></textarea>
+            <div class="notes-editor-footer">
+              <span class="notes-count">0/1000</span>
+              <button class="small-button notes-done-btn" type="button">Done</button>
+            </div>
+          </div>
+        </div>
       </td>
       <td class="delete-col">
         <button class="icon-button delete-task danger" type="button" aria-label="Delete task">&#x2715;</button>

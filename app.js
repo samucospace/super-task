@@ -5,7 +5,7 @@ const STORE_GROUPS = "groups";
 
 const GROUP_COLORS = ["#b0dd48","#8e59e8","#ea408d","#6f9cff","#79c58c","#f2b35a","#5fd3d4"];
 const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2, None: 3 };
-const DEFAULT_COL_WIDTHS = { "col-item": 360, "col-group": 200, "col-due": 160, "col-priority": 140 };
+const DEFAULT_COL_WIDTHS = { "col-item": 360, "col-group": 200, "col-due": 160, "col-priority": 140, "col-notes": 220 };
 
 const state = {
   db: null,
@@ -30,6 +30,11 @@ const titleInput        = document.querySelector("#task-title");
 const groupInput        = document.querySelector("#task-group");
 const dueDateInput      = document.querySelector("#task-due-date");
 const priorityInput     = document.querySelector("#task-priority");
+const notesInput        = document.querySelector("#task-notes");
+const composerNotesCell = document.querySelector(".composer-notes-cell");
+const composerNotesPreview = document.querySelector("#composer-notes-preview");
+const composerNotesEditor = document.querySelector("#composer-notes-editor");
+const composerNotesCount = document.querySelector("#composer-notes-count");
 const tableBody         = document.querySelector("#task-table-body");
 const taskCount             = document.querySelector("#task-count");
 const deleteCompletedBtn    = document.querySelector("#delete-completed-btn");
@@ -73,6 +78,7 @@ async function initializeApp() {
   }
 
   attachEventListeners();
+  closeComposerNotesEditor(false);
   initColumnResize();
   renderGroups();
   updateGroupDatalist();
@@ -83,9 +89,16 @@ async function initializeApp() {
 
 function attachEventListeners() {
   form.addEventListener("submit", handleTaskSubmit);
+  form.addEventListener("click", handleComposerClick);
+  form.addEventListener("input", handleComposerInput);
+  form.addEventListener("keydown", handleComposerKeydown);
+  form.addEventListener("focusout", handleComposerFocusOut);
   tableBody.addEventListener("click",         handleTableClick);
   deleteCompletedBtn.addEventListener("click", handleDeleteCompleted);
   tableBody.addEventListener("change",    handleTableChange);
+  tableBody.addEventListener("input",     handleTableInput);
+  tableBody.addEventListener("keydown",   handleTableKeydown);
+  tableBody.addEventListener("focusout",  handleTableFocusOut);
   tableBody.addEventListener("mousedown", (e) => { dragHandleActive = !!e.target.closest(".drag-handle"); });
   tableBody.addEventListener("dragstart", handleDragStart);
   tableBody.addEventListener("dragover",  handleDragOver);
@@ -112,6 +125,7 @@ function handleTaskSubmit(event) {
     group:     groupName,
     dueDate:   dueDateInput.value,
     priority:  priorityInput.value,
+    notes:     normalizeNotes(notesInput.value.trim()),
     completed: false,
     order:     state.tasks.length
   };
@@ -120,21 +134,150 @@ function handleTaskSubmit(event) {
   autoRegisterGroup(groupName).then(() => syncTasks()).then(() => {
     renderTasks();
     form.reset();
+    closeComposerNotesEditor(false);
     dueDateInput.value = todayString();
     priorityInput.value = "Low";
     titleInput.focus();
   });
 }
 
+function handleComposerClick(event) {
+  if (event.target.closest(".composer-notes-done-btn")) {
+    closeComposerNotesEditor(true);
+    return;
+  }
+
+  if (event.target.closest("#composer-notes-preview")) {
+    if (composerNotesCell?.classList.contains("notes-active")) {
+      closeComposerNotesEditor(true);
+      return;
+    }
+    openComposerNotesEditor();
+  }
+}
+
+function handleComposerInput(event) {
+  if (event.target !== notesInput) return;
+  if (composerNotesCount) {
+    composerNotesCount.textContent = `${notesInput.value.length}/1000`;
+  }
+}
+
+function handleComposerKeydown(event) {
+  if (event.target === composerNotesPreview && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+    openComposerNotesEditor();
+    return;
+  }
+
+  if (event.target !== notesInput || event.key !== "Escape") return;
+  event.preventDefault();
+  closeComposerNotesEditor(true);
+}
+
+function handleComposerFocusOut(event) {
+  const inComposerEditor = event.target.closest("#composer-notes-editor");
+  if (!inComposerEditor || !composerNotesCell?.classList.contains("notes-active")) return;
+
+  const next = event.relatedTarget;
+  if (next && composerNotesEditor?.contains(next)) return;
+  if (next && next === composerNotesPreview) return;
+  closeComposerNotesEditor(false);
+}
+
+function openComposerNotesEditor() {
+  if (!composerNotesCell || !composerNotesEditor || !notesInput) return;
+  composerNotesCell.classList.add("notes-active");
+  composerNotesEditor.hidden = false;
+  if (composerNotesCount) {
+    composerNotesCount.textContent = `${notesInput.value.length}/1000`;
+  }
+  notesInput.focus();
+  notesInput.setSelectionRange(notesInput.value.length, notesInput.value.length);
+}
+
+function closeComposerNotesEditor(focusPreview) {
+  if (!composerNotesCell || !composerNotesEditor || !composerNotesPreview || !notesInput) return;
+  const normalized = normalizeNotes(notesInput.value.trim());
+  notesInput.value = normalized;
+  composerNotesPreview.textContent = normalized ? summarizeNotes(normalized) : "No notes";
+  composerNotesPreview.classList.toggle("is-empty", !normalized);
+  if (composerNotesCount) {
+    composerNotesCount.textContent = `${normalized.length}/1000`;
+  }
+  composerNotesEditor.hidden = true;
+  composerNotesCell.classList.remove("notes-active");
+  if (focusPreview) composerNotesPreview.focus();
+}
+
 // ── TABLE INTERACTIONS ────────────────────────────────────────────────────────
 
 function handleTableClick(event) {
+  const notesDoneBtn = event.target.closest(".notes-done-btn");
+  if (notesDoneBtn) {
+    const row = notesDoneBtn.closest("tr[data-task-id]");
+    if (!row?.dataset.taskId) return;
+    saveNotesFromRow(row.dataset.taskId, row, true);
+    return;
+  }
+
+  const notesPreview = event.target.closest(".notes-preview");
+  if (notesPreview) {
+    const row = notesPreview.closest("tr[data-task-id]");
+    if (!row?.dataset.taskId) return;
+    if (row.classList.contains("notes-active")) {
+      saveNotesFromRow(row.dataset.taskId, row, true);
+      return;
+    }
+    openNotesEditor(row.dataset.taskId, row);
+    return;
+  }
+
   const btn = event.target.closest(".delete-task");
   if (!btn) return;
   const row = btn.closest("tr");
   if (!row?.dataset.taskId) return;
   state.tasks = state.tasks.filter(t => t.id !== row.dataset.taskId);
   syncTasks().then(renderTasks);
+}
+
+function handleTableInput(event) {
+  const text = event.target.closest(".task-notes-text");
+  if (!text) return;
+  const count = text.closest(".notes-editor")?.querySelector(".notes-count");
+  if (count) count.textContent = `${text.value.length}/1000`;
+}
+
+function handleTableKeydown(event) {
+  const preview = event.target.closest(".notes-preview");
+  if (preview && (event.key === "Enter" || event.key === " ")) {
+    const row = preview.closest("tr[data-task-id]");
+    if (!row?.dataset.taskId) return;
+    event.preventDefault();
+    openNotesEditor(row.dataset.taskId, row);
+    return;
+  }
+
+  const text = event.target.closest(".task-notes-text");
+  if (!text || event.key !== "Escape") return;
+  const row = text.closest("tr[data-task-id]");
+  if (!row?.dataset.taskId) return;
+  event.preventDefault();
+  saveNotesFromRow(row.dataset.taskId, row, true);
+  row.querySelector(".notes-preview")?.focus();
+}
+
+function handleTableFocusOut(event) {
+  const editor = event.target.closest(".notes-editor");
+  if (!editor) return;
+  const row = editor.closest("tr[data-task-id]");
+  if (!row?.dataset.taskId || !row.classList.contains("notes-active")) return;
+
+  const next = event.relatedTarget;
+  if (next && editor.contains(next)) return;
+  if (next && next === row.querySelector(".notes-preview")) return;
+
+  saveNotesFromRow(row.dataset.taskId, row, true);
 }
 
 function handleDeleteCompleted() {
@@ -435,7 +578,7 @@ function renderTasks() {
   const isManual = state.sort.key === "order";
 
   if (!tasks.length) {
-    tableBody.innerHTML = '<tr class="empty-row"><td colspan="7">No tasks yet. Add one above to get started.</td></tr>';
+    tableBody.innerHTML = '<tr class="empty-row"><td colspan="8">No tasks yet. Add one above to get started.</td></tr>';
     taskCount.textContent = "0 tasks";
     return;
   }
@@ -465,6 +608,15 @@ function renderTasks() {
     const sel = frag.querySelector(".priority-select");
     sel.value = task.priority;
     sel.dataset.priority = task.priority;
+
+    const notesText = normalizeNotes(task.notes);
+    const notesPreview = frag.querySelector(".notes-preview");
+    notesPreview.textContent = notesText ? summarizeNotes(notesText) : "No notes";
+    notesPreview.classList.toggle("is-empty", !notesText);
+
+    const notesArea = frag.querySelector(".task-notes-text");
+    notesArea.value = notesText;
+    frag.querySelector(".notes-count").textContent = `${notesText.length}/1000`;
 
     tableBody.appendChild(frag);
   }
@@ -638,6 +790,65 @@ function renderSortState() {
     btn.dataset.active    = active ? "true" : "false";
     btn.dataset.direction = active ? state.sort.direction : "";
   });
+}
+
+function normalizeNotes(value) {
+  return typeof value === "string" ? value.slice(0, 1000) : "";
+}
+
+function summarizeNotes(notesText) {
+  const singleLine = notesText.replace(/\s+/g, " ").trim();
+  if (singleLine.length <= 36) return singleLine;
+  return singleLine.slice(0, 36) + "...";
+}
+
+function openNotesEditor(taskId, row) {
+  const active = tableBody.querySelector("tr.notes-active");
+  if (active && active !== row && active.dataset.taskId) {
+    saveNotesFromRow(active.dataset.taskId, active, false);
+  }
+
+  const cell = row.querySelector(".notes-cell");
+  const editor = row.querySelector(".notes-editor");
+  const text = row.querySelector(".task-notes-text");
+  if (!cell || !editor || !text) return;
+
+  const task = state.tasks.find(t => t.id === taskId);
+  if (task) {
+    const notes = normalizeNotes(task.notes);
+    text.value = notes;
+    const count = row.querySelector(".notes-count");
+    if (count) count.textContent = `${notes.length}/1000`;
+  }
+
+  row.classList.add("notes-active");
+  cell.classList.add("is-expanded");
+  editor.hidden = false;
+  text.focus();
+  text.setSelectionRange(text.value.length, text.value.length);
+}
+
+function saveNotesFromRow(taskId, row, syncAfterSave) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  const cell = row.querySelector(".notes-cell");
+  const editor = row.querySelector(".notes-editor");
+  const text = row.querySelector(".task-notes-text");
+  const preview = row.querySelector(".notes-preview");
+  if (!cell || !editor || !text || !preview) return;
+
+  task.notes = normalizeNotes(text.value.trim());
+  preview.textContent = task.notes ? summarizeNotes(task.notes) : "No notes";
+  preview.classList.toggle("is-empty", !task.notes);
+
+  editor.hidden = true;
+  cell.classList.remove("is-expanded");
+  row.classList.remove("notes-active");
+
+  if (syncAfterSave) {
+    syncTasks();
+  }
 }
 
 // ── SYNC / PERSIST ────────────────────────────────────────────────────────────
