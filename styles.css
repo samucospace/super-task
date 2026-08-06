@@ -318,6 +318,8 @@ h1 {
 
 .composer-panel {
   padding: 14px;
+  position: relative;
+  z-index: 20;
 }
 
 .task-form {
@@ -395,6 +397,8 @@ h1 {
 
 .board-panel {
   overflow: visible;
+  position: relative;
+  z-index: 10;
 }
 
 .table-frame {
