@@ -23,6 +23,7 @@
       <div class="hero-right">
         <span class="status-pill" id="storage-status">Loading storage...</span>
         <div class="hero-buttons">
+          <button class="ghost-button" id="toggle-view-btn" type="button" aria-pressed="false">Card view</button>
           <button class="ghost-button" id="toggle-groups-btn" type="button">Groups &#9660;</button>
           <button class="ghost-button" id="export-btn" type="button">Export backup</button>
           <label class="ghost-button import-label">Import backup<input type="file" id="import-file" accept=".json"></label>
@@ -125,9 +126,50 @@
           <tbody id="task-table-body"></tbody>
         </table>
       </div>
+      <div class="group-card-board" id="group-card-board" hidden></div>
       <div class="table-footer">
         <span id="task-count">0 tasks</span>
         <button class="ghost-button danger-ghost" id="delete-completed-btn" type="button" hidden>Delete completed</button>
+      </div>
+    </section>
+
+    <section class="group-modal" id="group-modal" hidden aria-hidden="true">
+      <div class="group-modal-backdrop" data-close-group-modal="true"></div>
+      <div class="group-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="group-modal-title">
+        <div class="group-modal-header">
+          <h2 id="group-modal-title">Group tasks</h2>
+          <div class="group-modal-actions">
+            <button class="small-button" id="group-modal-add-task-btn" type="button">Add task to group</button>
+            <button class="icon-button" id="group-modal-close-btn" type="button" aria-label="Close group task view">✕</button>
+          </div>
+        </div>
+        <div class="group-modal-table-frame">
+          <table class="task-table" id="group-modal-table" aria-label="Group tasks">
+            <colgroup>
+              <col id="group-col-drag" style="width:36px">
+              <col id="group-col-check" style="width:48px">
+              <col id="group-col-item">
+              <col id="group-col-group">
+              <col id="group-col-due">
+              <col id="group-col-priority">
+              <col id="group-col-notes">
+              <col id="group-col-delete" style="width:52px">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="drag-th"></th>
+                <th class="checkbox-column"></th>
+                <th>Item</th>
+                <th>Group</th>
+                <th>Due date</th>
+                <th>Priority</th>
+                <th>Notes</th>
+                <th class="delete-th"></th>
+              </tr>
+            </thead>
+            <tbody id="group-modal-table-body"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 

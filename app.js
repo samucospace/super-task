@@ -14,7 +14,9 @@ const state = {
   storageMode: "indexeddb",
   sort: { key: "order", direction: "asc" },
   colWidths: { ...DEFAULT_COL_WIDTHS },
-  editingGroupId: null
+  editingGroupId: null,
+  viewMode: "list",
+  groupModal: { open: false, groupName: "" }
 };
 
 // Drag state
@@ -35,7 +37,14 @@ const composerNotesCell = document.querySelector(".composer-notes-cell");
 const composerNotesPreview = document.querySelector("#composer-notes-preview");
 const composerNotesEditor = document.querySelector("#composer-notes-editor");
 const composerNotesCount = document.querySelector("#composer-notes-count");
+const tableFrame        = document.querySelector(".table-frame");
 const tableBody         = document.querySelector("#task-table-body");
+const groupCardBoard    = document.querySelector("#group-card-board");
+const groupModal        = document.querySelector("#group-modal");
+const groupModalTitle   = document.querySelector("#group-modal-title");
+const groupModalTableBody = document.querySelector("#group-modal-table-body");
+const groupModalAddTaskBtn = document.querySelector("#group-modal-add-task-btn");
+const groupModalCloseBtn = document.querySelector("#group-modal-close-btn");
 const taskCount             = document.querySelector("#task-count");
 const deleteCompletedBtn    = document.querySelector("#delete-completed-btn");
 const rowTemplate       = document.querySelector("#task-row-template");
@@ -45,6 +54,7 @@ const groupDatalist     = document.querySelector("#group-datalist");
 const groupsPanel       = document.querySelector("#groups-panel");
 const groupsList        = document.querySelector("#groups-list");
 const toggleGroupsBtn   = document.querySelector("#toggle-groups-btn");
+const toggleViewBtn     = document.querySelector("#toggle-view-btn");
 const addGroupForm      = document.querySelector("#add-group-form");
 const newGroupNameInput = document.querySelector("#new-group-name");
 const exportBtn         = document.querySelector("#export-btn");
@@ -62,6 +72,12 @@ async function initializeApp() {
     try { Object.assign(state.colWidths, JSON.parse(savedWidths)); } catch (_) {}
   }
   applyColumnWidths();
+
+  const savedViewMode = localStorage.getItem("super-task-view-mode");
+  if (savedViewMode === "cards") {
+    state.viewMode = "cards";
+  }
+  applyViewMode(false);
 
   try {
     state.db = await openDatabase();
@@ -107,11 +123,58 @@ function attachEventListeners() {
   tableBody.addEventListener("dragend",   handleDragEnd);
   sortButtons.forEach(btn => btn.addEventListener("click", handleSortClick));
   toggleGroupsBtn.addEventListener("click", toggleGroupsPanel);
+  toggleViewBtn.addEventListener("click", toggleViewMode);
   addGroupForm.addEventListener("submit", handleAddGroup);
   groupsList.addEventListener("click",   handleGroupsListClick);
   groupsList.addEventListener("keydown", handleGroupsListKeydown);
+  groupCardBoard.addEventListener("change", handleCardBoardChange);
+  groupCardBoard.addEventListener("click", handleCardBoardClick);
+  groupModalTableBody.addEventListener("click", handleGroupModalTableClick);
+  groupModalTableBody.addEventListener("change", handleGroupModalTableChange);
+  groupModalTableBody.addEventListener("input", handleGroupModalTableInput);
+  groupModalTableBody.addEventListener("keydown", handleGroupModalTableKeydown);
+  groupModalTableBody.addEventListener("focusout", handleGroupModalTableFocusOut);
+  groupModalCloseBtn.addEventListener("click", closeGroupModal);
+  groupModalAddTaskBtn.addEventListener("click", handleGroupModalAddTask);
+  groupModal.addEventListener("click", handleGroupModalShellClick);
+  document.addEventListener("keydown", handleDocumentKeydown);
   exportBtn.addEventListener("click",   exportBackup);
   importFile.addEventListener("change", handleImportFile);
+}
+
+function handleDocumentKeydown(event) {
+  if (event.key === "Escape" && state.groupModal.open) {
+    closeGroupModal();
+  }
+}
+
+function toggleViewMode() {
+  state.viewMode = state.viewMode === "list" ? "cards" : "list";
+  applyViewMode(true);
+  renderTasks();
+}
+
+function applyViewMode(shouldPersist) {
+  const inCardsMode = state.viewMode === "cards";
+
+  if (toggleViewBtn) {
+    toggleViewBtn.textContent = inCardsMode ? "Table view" : "Card view";
+    toggleViewBtn.setAttribute("aria-pressed", inCardsMode ? "true" : "false");
+  }
+
+  if (tableFrame && groupCardBoard) {
+    if (inCardsMode) {
+      tableFrame.setAttribute("hidden", "");
+      groupCardBoard.removeAttribute("hidden");
+    } else {
+      groupCardBoard.setAttribute("hidden", "");
+      tableFrame.removeAttribute("hidden");
+    }
+  }
+
+  if (shouldPersist) {
+    localStorage.setItem("super-task-view-mode", state.viewMode);
+  }
 }
 
 // ── TASK FORM ─────────────────────────────────────────────────────────────────
@@ -572,54 +635,15 @@ async function autoRegisterGroup(name) {
 // ── RENDER TASKS ──────────────────────────────────────────────────────────────
 
 function renderTasks() {
-  tableBody.innerHTML = "";
   renderSortState();
-  const tasks    = getVisibleTasks();
-  const isManual = state.sort.key === "order";
+  const tasks = getVisibleTasks();
 
-  if (!tasks.length) {
-    tableBody.innerHTML = '<tr class="empty-row"><td colspan="8">No tasks yet. Add one above to get started.</td></tr>';
-    taskCount.textContent = "0 tasks";
-    return;
+  if (state.viewMode === "cards") {
+    renderGroupCards(tasks);
+  } else {
+    renderTaskTable(tasks);
   }
 
-  for (const task of tasks) {
-    const frag = rowTemplate.content.cloneNode(true);
-    const row  = frag.querySelector("tr");
-    row.dataset.taskId = task.id;
-    row.setAttribute("draggable", isManual ? "true" : "false");
-    row.classList.toggle("is-complete", task.completed);
-
-    const handle = frag.querySelector(".drag-handle");
-    handle.style.opacity = isManual ? "1" : "0.3";
-    handle.style.cursor  = isManual ? "grab" : "not-allowed";
-    handle.title = isManual ? "Drag to reorder" : "Switch to manual order to reorder";
-
-    frag.querySelector(".task-complete").checked     = task.completed;
-    frag.querySelector(".task-title-input").value    = task.title;
-    frag.querySelector(".task-group-input").value    = task.group;
-
-    const dot = frag.querySelector(".group-dot");
-    dot.style.background = colorForGroup(task.group);
-
-    frag.querySelector(".due-indicator").style.setProperty("--progress", dueProgress(task.dueDate));
-    frag.querySelector(".task-date-input").value = task.dueDate;
-
-    const sel = frag.querySelector(".priority-select");
-    sel.value = task.priority;
-    sel.dataset.priority = task.priority;
-
-    const notesText = normalizeNotes(task.notes);
-    const notesPreview = frag.querySelector(".notes-preview");
-    notesPreview.textContent = notesText ? summarizeNotes(notesText) : "No notes";
-    notesPreview.classList.toggle("is-empty", !notesText);
-
-    const notesArea = frag.querySelector(".task-notes-text");
-    notesArea.value = notesText;
-    frag.querySelector(".notes-count").textContent = `${notesText.length}/1000`;
-
-    tableBody.appendChild(frag);
-  }
   const completedCount = state.tasks.filter(t => t.completed).length;
   const totalCount     = state.tasks.length;
   taskCount.textContent = completedCount
@@ -627,6 +651,390 @@ function renderTasks() {
     : `${totalCount} task${totalCount === 1 ? "" : "s"}`;
   if (deleteCompletedBtn) {
     deleteCompletedBtn.hidden = completedCount === 0;
+  }
+}
+
+function renderTaskTable(tasks) {
+  tableBody.innerHTML = "";
+  const isManual = state.sort.key === "order";
+
+  if (!tasks.length) {
+    tableBody.innerHTML = '<tr class="empty-row"><td colspan="8">No tasks yet. Add one above to get started.</td></tr>';
+    return;
+  }
+
+  for (const task of tasks) {
+    tableBody.appendChild(createTaskRow(task, { isManual, rowVariant: "main" }));
+  }
+}
+
+function createTaskRow(task, options) {
+  const isManual = !!options.isManual;
+  const rowVariant = options.rowVariant || "main";
+  const frag = rowTemplate.content.cloneNode(true);
+  const row  = frag.querySelector("tr");
+  row.dataset.taskId = task.id;
+  row.dataset.rowVariant = rowVariant;
+  row.setAttribute("draggable", isManual ? "true" : "false");
+  row.classList.toggle("is-complete", task.completed);
+
+  const handle = frag.querySelector(".drag-handle");
+  handle.style.opacity = isManual ? "1" : "0.3";
+  handle.style.cursor  = isManual ? "grab" : "not-allowed";
+  handle.title = isManual ? "Drag to reorder" : "Switch to manual order to reorder";
+
+  frag.querySelector(".task-complete").checked     = task.completed;
+  frag.querySelector(".task-title-input").value    = task.title;
+  frag.querySelector(".task-group-input").value    = task.group;
+
+  const dot = frag.querySelector(".group-dot");
+  dot.style.background = colorForGroup(task.group);
+
+  frag.querySelector(".due-indicator").style.setProperty("--progress", dueProgress(task.dueDate));
+  frag.querySelector(".task-date-input").value = task.dueDate;
+
+  const sel = frag.querySelector(".priority-select");
+  sel.value = task.priority;
+  sel.dataset.priority = task.priority;
+
+  const notesText = normalizeNotes(task.notes);
+  const notesPreview = frag.querySelector(".notes-preview");
+  notesPreview.textContent = notesText ? summarizeNotes(notesText) : "No notes";
+  notesPreview.classList.toggle("is-empty", !notesText);
+
+  const notesArea = frag.querySelector(".task-notes-text");
+  notesArea.value = notesText;
+  frag.querySelector(".notes-count").textContent = `${notesText.length}/1000`;
+
+  return frag;
+}
+
+function renderGroupCards(tasks) {
+  groupCardBoard.innerHTML = "";
+
+  const openTasks = tasks.filter(task => !task.completed);
+
+  const groupsMap = new Map();
+  for (const task of openTasks) {
+    if (!groupsMap.has(task.group)) groupsMap.set(task.group, []);
+    groupsMap.get(task.group).push(task);
+  }
+
+  const orderedGroups = [...groupsMap.entries()].sort((a, b) => {
+    if (b[1].length !== a[1].length) return b[1].length - a[1].length;
+    return a[0].localeCompare(b[0], undefined, { sensitivity: "base" });
+  });
+
+  if (!orderedGroups.length) {
+    groupCardBoard.innerHTML = '<p class="group-card-empty">No open tasks to show in card view.</p>';
+    return;
+  }
+
+  for (const [groupName, groupTasks] of orderedGroups) {
+    const card = document.createElement("article");
+    card.className = "group-card";
+    card.dataset.groupName = groupName;
+    card.style.setProperty("--card-span", String(Math.max(3, Math.min(12, 3 + Math.ceil(groupTasks.length * 1.2)))));
+
+    const header = document.createElement("header");
+    header.className = "group-card-header";
+
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "group-card-title-wrap";
+
+    const dot = document.createElement("span");
+    dot.className = "group-dot";
+    dot.style.background = colorForGroup(groupName);
+
+    const title = document.createElement("h3");
+    title.className = "group-card-title";
+    title.textContent = groupName;
+
+    titleWrap.appendChild(dot);
+    titleWrap.appendChild(title);
+
+    const count = document.createElement("span");
+    count.className = "group-card-count";
+    count.textContent = `${groupTasks.length} task${groupTasks.length === 1 ? "" : "s"}`;
+
+    header.appendChild(titleWrap);
+    header.appendChild(count);
+
+    const list = document.createElement("ul");
+    list.className = "group-card-task-list";
+
+    if (!groupTasks.length) {
+      const empty = document.createElement("li");
+      empty.className = "group-card-task-empty";
+      empty.textContent = "No tasks in this group";
+      list.appendChild(empty);
+    } else {
+      for (const task of groupTasks) {
+        const item = document.createElement("li");
+        item.className = "group-card-task";
+        item.classList.toggle("is-complete", task.completed);
+
+        const left = document.createElement("div");
+        left.className = "group-card-task-main";
+
+        const check = document.createElement("input");
+        check.type = "checkbox";
+        check.className = "card-task-complete";
+        check.dataset.taskId = task.id;
+        check.checked = task.completed;
+        check.setAttribute("aria-label", `Mark ${task.title} complete`);
+
+        const text = document.createElement("span");
+        text.className = "group-card-task-title";
+        text.textContent = task.title;
+
+        left.appendChild(check);
+        left.appendChild(text);
+
+        const meta = document.createElement("span");
+        meta.className = "group-card-task-meta";
+        meta.textContent = `${task.dueDate} · ${task.priority}`;
+
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "icon-button card-task-delete danger";
+        del.dataset.taskId = task.id;
+        del.setAttribute("aria-label", `Delete ${task.title}`);
+        del.textContent = "✕";
+
+        item.appendChild(left);
+        item.appendChild(meta);
+        item.appendChild(del);
+        list.appendChild(item);
+      }
+    }
+
+    card.appendChild(header);
+    card.appendChild(list);
+    groupCardBoard.appendChild(card);
+  }
+}
+
+function handleCardBoardChange(event) {
+  const completeInput = event.target.closest(".card-task-complete");
+  if (!completeInput?.dataset.taskId) return;
+
+  const task = state.tasks.find(t => t.id === completeInput.dataset.taskId);
+  if (!task) return;
+  task.completed = completeInput.checked;
+
+  state.tasks = positionTaskByCurrentSort(task);
+  syncTasks().then(renderTasks);
+}
+
+function handleCardBoardClick(event) {
+  if (!event.target.closest("input") && !event.target.closest("button")) {
+    const card = event.target.closest(".group-card");
+    if (card?.dataset.groupName) {
+      openGroupModal(card.dataset.groupName);
+      return;
+    }
+  }
+
+  const deleteBtn = event.target.closest(".card-task-delete");
+  if (!deleteBtn?.dataset.taskId) return;
+  state.tasks = state.tasks.filter(task => task.id !== deleteBtn.dataset.taskId);
+  syncTasks().then(renderTasks);
+}
+
+function openGroupModal(groupName) {
+  state.groupModal.open = true;
+  state.groupModal.groupName = groupName;
+  groupModalTitle.textContent = `${groupName} tasks`;
+  groupModal.removeAttribute("hidden");
+  groupModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+  renderGroupModalTasks();
+}
+
+function closeGroupModal() {
+  state.groupModal.open = false;
+  state.groupModal.groupName = "";
+  groupModal.setAttribute("hidden", "");
+  groupModal.setAttribute("aria-hidden", "true");
+  groupModalTableBody.innerHTML = "";
+  document.body.classList.remove("modal-open");
+}
+
+function handleGroupModalShellClick(event) {
+  if (event.target.closest("[data-close-group-modal='true']")) {
+    closeGroupModal();
+  }
+}
+
+function renderGroupModalTasks(focusTaskId) {
+  if (!state.groupModal.open || !state.groupModal.groupName) return;
+  groupModalTableBody.innerHTML = "";
+
+  const groupTasks = getVisibleTasks().filter(task => task.group === state.groupModal.groupName);
+  if (!groupTasks.length) {
+    groupModalTableBody.innerHTML = '<tr class="empty-row"><td colspan="8">No tasks in this group.</td></tr>';
+    return;
+  }
+
+  for (const task of groupTasks) {
+    groupModalTableBody.appendChild(createTaskRow(task, { isManual: false, rowVariant: "group-modal" }));
+  }
+
+  if (focusTaskId) {
+    const input = groupModalTableBody.querySelector(`tr[data-task-id="${focusTaskId}"] .task-title-input`);
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }
+}
+
+function handleGroupModalAddTask() {
+  if (!state.groupModal.groupName) return;
+
+  const task = {
+    id:        createId(),
+    title:     "New task",
+    group:     state.groupModal.groupName,
+    dueDate:   todayString(),
+    priority:  "Low",
+    notes:     "",
+    completed: false,
+    order:     state.tasks.length
+  };
+
+  state.tasks = insertTaskByCurrentSort(task);
+  autoRegisterGroup(task.group)
+    .then(() => syncTasks())
+    .then(() => {
+      renderTasks();
+      renderGroupModalTasks(task.id);
+    });
+}
+
+function handleGroupModalTableClick(event) {
+  const notesDoneBtn = event.target.closest(".notes-done-btn");
+  if (notesDoneBtn) {
+    const row = notesDoneBtn.closest("tr[data-task-id]");
+    if (!row?.dataset.taskId) return;
+    saveNotesFromRow(row.dataset.taskId, row, true);
+    return;
+  }
+
+  const notesPreview = event.target.closest(".notes-preview");
+  if (notesPreview) {
+    const row = notesPreview.closest("tr[data-task-id]");
+    if (!row?.dataset.taskId) return;
+    if (row.classList.contains("notes-active")) {
+      saveNotesFromRow(row.dataset.taskId, row, true);
+      return;
+    }
+    openNotesEditor(row.dataset.taskId, row, groupModalTableBody);
+    return;
+  }
+
+  const btn = event.target.closest(".delete-task");
+  if (!btn) return;
+  const row = btn.closest("tr");
+  if (!row?.dataset.taskId) return;
+  state.tasks = state.tasks.filter(t => t.id !== row.dataset.taskId);
+  syncTasks().then(() => {
+    renderTasks();
+    renderGroupModalTasks();
+  });
+}
+
+function handleGroupModalTableInput(event) {
+  const text = event.target.closest(".task-notes-text");
+  if (!text) return;
+  const count = text.closest(".notes-editor")?.querySelector(".notes-count");
+  if (count) count.textContent = `${text.value.length}/1000`;
+}
+
+function handleGroupModalTableKeydown(event) {
+  const preview = event.target.closest(".notes-preview");
+  if (preview && (event.key === "Enter" || event.key === " ")) {
+    const row = preview.closest("tr[data-task-id]");
+    if (!row?.dataset.taskId) return;
+    event.preventDefault();
+    openNotesEditor(row.dataset.taskId, row, groupModalTableBody);
+    return;
+  }
+
+  const text = event.target.closest(".task-notes-text");
+  if (!text || event.key !== "Escape") return;
+  const row = text.closest("tr[data-task-id]");
+  if (!row?.dataset.taskId) return;
+  event.preventDefault();
+  saveNotesFromRow(row.dataset.taskId, row, true);
+  row.querySelector(".notes-preview")?.focus();
+}
+
+function handleGroupModalTableFocusOut(event) {
+  const editor = event.target.closest(".notes-editor");
+  if (!editor) return;
+  const row = editor.closest("tr[data-task-id]");
+  if (!row?.dataset.taskId || !row.classList.contains("notes-active")) return;
+
+  const next = event.relatedTarget;
+  if (next && editor.contains(next)) return;
+  if (next && next === row.querySelector(".notes-preview")) return;
+
+  saveNotesFromRow(row.dataset.taskId, row, true);
+}
+
+function handleGroupModalTableChange(event) {
+  const el = event.target;
+  const row = el.closest("tr[data-task-id]");
+  if (!row) return;
+  const task = state.tasks.find(t => t.id === row.dataset.taskId);
+  if (!task) return;
+
+  if (el.classList.contains("task-complete")) {
+    task.completed = el.checked;
+    row.classList.toggle("is-complete", task.completed);
+    state.tasks = positionTaskByCurrentSort(task);
+    syncTasks().then(() => {
+      renderTasks();
+      renderGroupModalTasks();
+    });
+    return;
+  }
+
+  const field = el.closest(".task-field");
+  if (!field) return;
+  const fieldName = field.dataset.field;
+
+  if (fieldName === "group") {
+    const trimmed = el.value.trim();
+    if (!trimmed) return;
+    task.group = trimmed;
+    const dot = row.querySelector(".group-dot");
+    if (dot) dot.style.background = colorForGroup(trimmed);
+    autoRegisterGroup(trimmed)
+      .then(() => syncTasks())
+      .then(() => {
+        renderTasks();
+        renderGroupModalTasks();
+      });
+    return;
+  }
+  if (fieldName === "title") {
+    const v = el.value.trim();
+    if (v) task.title = v;
+    syncTasks().then(renderTasks);
+    return;
+  }
+  if (fieldName === "dueDate" && el.value) {
+    task.dueDate = el.value;
+    syncTasks().then(renderTasks);
+    return;
+  }
+  if (fieldName === "priority") {
+    task.priority = el.value;
+    el.dataset.priority = el.value;
+    syncTasks().then(renderTasks);
   }
 }
 
@@ -802,8 +1210,8 @@ function summarizeNotes(notesText) {
   return singleLine.slice(0, 36) + "...";
 }
 
-function openNotesEditor(taskId, row) {
-  const active = tableBody.querySelector("tr.notes-active");
+function openNotesEditor(taskId, row, container = tableBody) {
+  const active = container.querySelector("tr.notes-active");
   if (active && active !== row && active.dataset.taskId) {
     saveNotesFromRow(active.dataset.taskId, active, false);
   }
