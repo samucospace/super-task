@@ -26,6 +26,7 @@ const appStore = window.SuperTaskStorage.createAppStore({
   setStorageStatus,
   getState: () => state
 });
+const repositories = createRepositories();
 
 // Drag state
 let dragSrcId = null;
@@ -191,8 +192,7 @@ function handleTaskSubmit(event) {
     order:     state.tasks.length
   };
   if (!task.title || !task.group || !task.dueDate) return;
-  state.tasks = insertTaskByCurrentSort(task);
-  autoRegisterGroup(groupName).then(() => syncTasks()).then(() => {
+  repositories.addTask(task).then(() => {
     renderTasks();
     form.reset();
     closeComposerNotesEditor(false);
@@ -298,8 +298,7 @@ function handleTableClick(event) {
   if (!btn) return;
   const row = btn.closest("tr");
   if (!row?.dataset.taskId) return;
-  state.tasks = state.tasks.filter(t => t.id !== row.dataset.taskId);
-  syncTasks().then(renderTasks);
+  repositories.deleteTask(row.dataset.taskId).then(renderTasks);
 }
 
 function handleTableInput(event) {
@@ -345,9 +344,7 @@ function handleDeleteCompleted() {
   const count = state.tasks.filter(t => t.completed).length;
   if (!count) return;
   if (!confirm(`Delete ${count} completed task${count === 1 ? "" : "s"}? This cannot be undone.`)) return;
-  state.tasks = state.tasks.filter(t => !t.completed);
-  state.tasks.forEach((t, i) => { t.order = i; });
-  syncTasks().then(renderTasks);
+  repositories.deleteCompletedTasks().then(renderTasks);
 }
 
 function handleTableChange(event) {
@@ -360,8 +357,7 @@ function handleTableChange(event) {
   if (el.classList.contains("task-complete")) {
     task.completed = el.checked;
     row.classList.toggle("is-complete", task.completed);
-    state.tasks = positionTaskByCurrentSort(task);
-    syncTasks().then(renderTasks);
+    repositories.updateTaskPosition(task).then(renderTasks);
     return;
   }
 
@@ -375,24 +371,24 @@ function handleTableChange(event) {
     task.group = trimmed;
     const dot = row.querySelector(".group-dot");
     if (dot) dot.style.background = colorForGroup(trimmed);
-    autoRegisterGroup(trimmed).then(() => syncTasks());
+    repositories.persistTaskWithGroup(task, trimmed);
     return;
   }
   if (fieldName === "title") {
     const v = el.value.trim();
     if (v) task.title = v;
-    syncTasks();
+    repositories.saveTasks();
     return;
   }
   if (fieldName === "dueDate" && el.value) {
     task.dueDate = el.value;
-    syncTasks();
+    repositories.saveTasks();
     return;
   }
   if (fieldName === "priority") {
     task.priority = el.value;
     el.dataset.priority = el.value;
-    syncTasks();
+    repositories.saveTasks();
     return;
   }
 }
@@ -441,7 +437,7 @@ function handleDrop(event) {
   ordered.splice(insertAfter ? newTgtIdx + 1 : newTgtIdx, 0, removed);
   ordered.forEach((t, i) => { t.order = i; });
   state.tasks = ordered;
-  syncTasks().then(renderTasks);
+  repositories.saveTasks().then(renderTasks);
 }
 
 function handleDragEnd() {
@@ -522,7 +518,7 @@ function handleGroupsListClick(event) {
     group.name = newName;
     state.tasks.forEach(t => { if (t.group === oldName) t.group = newName; });
     state.editingGroupId = null;
-    Promise.all([appStore.saveGroup(group), syncTasks()]).then(() => {
+    repositories.renameGroup(group, oldName).then(() => {
       renderGroups();
       updateGroupDatalist();
       renderTasks();
@@ -535,8 +531,7 @@ function handleGroupsListClick(event) {
     return;
   }
   if (btn.classList.contains("delete-group")) {
-    state.groups = state.groups.filter(g => g.id !== groupId);
-    appStore.deleteGroup(groupId).then(() => { renderGroups(); updateGroupDatalist(); });
+    repositories.deleteGroup(groupId).then(() => { renderGroups(); updateGroupDatalist(); });
     return;
   }
 }
@@ -821,8 +816,7 @@ function handleCardBoardChange(event) {
   if (!task) return;
   task.completed = completeInput.checked;
 
-  state.tasks = positionTaskByCurrentSort(task);
-  syncTasks().then(renderTasks);
+  repositories.updateTaskPosition(task).then(renderTasks);
 }
 
 function handleCardBoardClick(event) {
@@ -836,8 +830,7 @@ function handleCardBoardClick(event) {
 
   const deleteBtn = event.target.closest(".card-task-delete");
   if (!deleteBtn?.dataset.taskId) return;
-  state.tasks = state.tasks.filter(task => task.id !== deleteBtn.dataset.taskId);
-  syncTasks().then(renderTasks);
+  repositories.deleteTask(deleteBtn.dataset.taskId).then(renderTasks);
 }
 
 function openGroupModal(groupName) {
@@ -902,9 +895,7 @@ function handleGroupModalAddTask() {
     order:     state.tasks.length
   };
 
-  state.tasks = insertTaskByCurrentSort(task);
-  autoRegisterGroup(task.group)
-    .then(() => syncTasks())
+  repositories.addTask(task)
     .then(() => {
       renderTasks();
       renderGroupModalTasks(task.id);
@@ -936,8 +927,7 @@ function handleGroupModalTableClick(event) {
   if (!btn) return;
   const row = btn.closest("tr");
   if (!row?.dataset.taskId) return;
-  state.tasks = state.tasks.filter(t => t.id !== row.dataset.taskId);
-  syncTasks().then(() => {
+  repositories.deleteTask(row.dataset.taskId).then(() => {
     renderTasks();
     renderGroupModalTasks();
   });
@@ -992,8 +982,7 @@ function handleGroupModalTableChange(event) {
   if (el.classList.contains("task-complete")) {
     task.completed = el.checked;
     row.classList.toggle("is-complete", task.completed);
-    state.tasks = positionTaskByCurrentSort(task);
-    syncTasks().then(() => {
+    repositories.updateTaskPosition(task).then(() => {
       renderTasks();
       renderGroupModalTasks();
     });
@@ -1010,8 +999,7 @@ function handleGroupModalTableChange(event) {
     task.group = trimmed;
     const dot = row.querySelector(".group-dot");
     if (dot) dot.style.background = colorForGroup(trimmed);
-    autoRegisterGroup(trimmed)
-      .then(() => syncTasks())
+    repositories.persistTaskWithGroup(task, trimmed)
       .then(() => {
         renderTasks();
         renderGroupModalTasks();
@@ -1021,18 +1009,18 @@ function handleGroupModalTableChange(event) {
   if (fieldName === "title") {
     const v = el.value.trim();
     if (v) task.title = v;
-    syncTasks().then(renderTasks);
+    repositories.saveTasks().then(renderTasks);
     return;
   }
   if (fieldName === "dueDate" && el.value) {
     task.dueDate = el.value;
-    syncTasks().then(renderTasks);
+    repositories.saveTasks().then(renderTasks);
     return;
   }
   if (fieldName === "priority") {
     task.priority = el.value;
     el.dataset.priority = el.value;
-    syncTasks().then(renderTasks);
+    repositories.saveTasks().then(renderTasks);
   }
 }
 
@@ -1120,7 +1108,7 @@ function handleImportFile(event) {
         applyColumnWidths();
         saveColWidths();
       }
-      await appStore.saveAll({ tasks: state.tasks, groups: state.groups });
+      await repositories.importData({ tasks: state.tasks, groups: state.groups });
       renderGroups();
       updateGroupDatalist();
       renderTasks();
@@ -1261,6 +1249,56 @@ function saveNotesFromRow(taskId, row, syncAfterSave) {
 async function syncTasks() {
   state.tasks = getManualTasks().map((t, i) => ({ ...t, order: i }));
   await appStore.saveTasks(state.tasks);
+}
+
+function createRepositories() {
+  return {
+    addTask(task) {
+      state.tasks = insertTaskByCurrentSort(task);
+      return autoRegisterGroup(task.group).then(() => syncTasks());
+    },
+
+    deleteTask(taskId) {
+      state.tasks = state.tasks.filter(task => task.id !== taskId);
+      return syncTasks();
+    },
+
+    deleteCompletedTasks() {
+      state.tasks = state.tasks.filter(task => !task.completed);
+      state.tasks.forEach((task, index) => { task.order = index; });
+      return syncTasks();
+    },
+
+    updateTaskPosition(task) {
+      state.tasks = positionTaskByCurrentSort(task);
+      return syncTasks();
+    },
+
+    persistTaskWithGroup(task, groupName) {
+      task.group = groupName;
+      return autoRegisterGroup(groupName).then(() => syncTasks());
+    },
+
+    renameGroup(group, oldName) {
+      state.tasks.forEach(task => {
+        if (task.group === oldName) task.group = group.name;
+      });
+      return Promise.all([appStore.saveGroup(group), syncTasks()]);
+    },
+
+    deleteGroup(groupId) {
+      state.groups = state.groups.filter(group => group.id !== groupId);
+      return appStore.deleteGroup(groupId);
+    },
+
+    importData(nextState) {
+      return appStore.saveAll(nextState);
+    },
+
+    saveTasks() {
+      return syncTasks();
+    }
+  };
 }
 
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
