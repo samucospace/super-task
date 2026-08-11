@@ -19,6 +19,8 @@ const state = {
   groupModal: { open: false, groupName: "" }
 };
 
+const appStore = createAppStore();
+
 // Drag state
 let dragSrcId = null;
 let dragHandleActive = false;
@@ -79,19 +81,9 @@ async function initializeApp() {
   }
   applyViewMode(false);
 
-  try {
-    state.db = await openDatabase();
-    state.tasks  = await readAllFromStore(STORE_TASKS);
-    state.groups = await readAllFromStore(STORE_GROUPS);
-    setStorageStatus("IndexedDB ready", false);
-  } catch (err) {
-    console.error("IndexedDB unavailable, using localStorage.", err);
-    state.storageMode = "localstorage";
-    const fallback    = readLocalFallback();
-    state.tasks       = fallback.tasks  || [];
-    state.groups      = fallback.groups || [];
-    setStorageStatus("Using local fallback", true);
-  }
+  const loadedState = await appStore.load();
+  state.tasks = loadedState.tasks;
+  state.groups = loadedState.groups;
 
   attachEventListeners();
   closeComposerNotesEditor(false);
@@ -524,7 +516,7 @@ function handleGroupsListClick(event) {
     group.name = newName;
     state.tasks.forEach(t => { if (t.group === oldName) t.group = newName; });
     state.editingGroupId = null;
-    Promise.all([saveGroupToDb(group), syncTasks()]).then(() => {
+    Promise.all([appStore.saveGroup(group), syncTasks()]).then(() => {
       renderGroups();
       updateGroupDatalist();
       renderTasks();
@@ -538,7 +530,7 @@ function handleGroupsListClick(event) {
   }
   if (btn.classList.contains("delete-group")) {
     state.groups = state.groups.filter(g => g.id !== groupId);
-    deleteGroupFromDb(groupId).then(() => { renderGroups(); updateGroupDatalist(); });
+    appStore.deleteGroup(groupId).then(() => { renderGroups(); updateGroupDatalist(); });
     return;
   }
 }
@@ -627,7 +619,7 @@ async function autoRegisterGroup(name) {
   if (!name || state.groups.some(g => g.name.toLowerCase() === name.toLowerCase())) return;
   const group = { id: createId(), name };
   state.groups.push(group);
-  await saveGroupToDb(group);
+  await appStore.saveGroup(group);
   renderGroups();
   updateGroupDatalist();
 }
@@ -1122,8 +1114,7 @@ function handleImportFile(event) {
         applyColumnWidths();
         saveColWidths();
       }
-      await persistAllToStore(STORE_TASKS,  state.tasks);
-      await persistAllToStore(STORE_GROUPS, state.groups);
+      await appStore.saveAll({ tasks: state.tasks, groups: state.groups });
       renderGroups();
       updateGroupDatalist();
       renderTasks();
@@ -1263,11 +1254,73 @@ function saveNotesFromRow(taskId, row, syncAfterSave) {
 
 async function syncTasks() {
   state.tasks = getManualTasks().map((t, i) => ({ ...t, order: i }));
-  if (state.storageMode === "indexeddb") {
-    await persistAllToStore(STORE_TASKS, state.tasks);
-  } else {
-    writeLocalFallback({ tasks: state.tasks, groups: state.groups });
-  }
+  await appStore.saveTasks(state.tasks);
+}
+
+function createAppStore() {
+  return {
+    async load() {
+      try {
+        state.db = await openDatabase();
+        state.storageMode = "indexeddb";
+        setStorageStatus("IndexedDB ready", false);
+        return {
+          tasks: await readAllFromStore(STORE_TASKS),
+          groups: await readAllFromStore(STORE_GROUPS)
+        };
+      } catch (err) {
+        console.error("IndexedDB unavailable, using localStorage.", err);
+        state.storageMode = "localstorage";
+        setStorageStatus("Using local fallback", true);
+        const fallback = readLocalFallback();
+        return {
+          tasks: fallback.tasks || [],
+          groups: fallback.groups || []
+        };
+      }
+    },
+
+    async saveTasks(tasks) {
+      if (state.storageMode === "indexeddb") {
+        await persistAllToStore(STORE_TASKS, tasks);
+        return;
+      }
+      writeLocalFallback({ tasks, groups: state.groups });
+    },
+
+    async saveGroups(groups) {
+      if (state.storageMode === "indexeddb") {
+        await persistAllToStore(STORE_GROUPS, groups);
+        return;
+      }
+      writeLocalFallback({ tasks: state.tasks, groups });
+    },
+
+    async saveAll(nextState) {
+      if (state.storageMode === "indexeddb") {
+        await persistAllToStore(STORE_TASKS, nextState.tasks);
+        await persistAllToStore(STORE_GROUPS, nextState.groups);
+        return;
+      }
+      writeLocalFallback(nextState);
+    },
+
+    async saveGroup(group) {
+      if (state.storageMode !== "indexeddb") {
+        writeLocalFallback({ tasks: state.tasks, groups: state.groups });
+        return;
+      }
+      await saveGroupToDb(group);
+    },
+
+    async deleteGroup(groupId) {
+      if (state.storageMode !== "indexeddb") {
+        writeLocalFallback({ tasks: state.tasks, groups: state.groups });
+        return;
+      }
+      await deleteGroupFromDb(groupId);
+    }
+  };
 }
 
 // ── DATABASE ──────────────────────────────────────────────────────────────────
