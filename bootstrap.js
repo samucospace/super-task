@@ -33,6 +33,12 @@ window.SuperTaskBootstrap = (() => {
     } = options;
 
     dom.form.addEventListener("submit", handlers.handleTaskSubmit);
+    if (dom.authForm) {
+      dom.authForm.addEventListener("submit", handlers.handleAuthSubmit);
+    }
+    if (dom.authSignOutBtn) {
+      dom.authSignOutBtn.addEventListener("click", handlers.handleAuthSignOut);
+    }
     dom.form.addEventListener("click", handlers.handleComposerClick);
     dom.form.addEventListener("input", handlers.handleComposerInput);
     dom.form.addEventListener("keydown", handlers.handleComposerKeydown);

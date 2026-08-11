@@ -10,6 +10,7 @@
 } = window.SuperTaskCore;
 
 const state = createInitialState();
+const authService = window.SuperTaskAuth.createAuthService();
 
 const appStore = window.SuperTaskStorage.createAppStore({
   dbName: DB_NAME,
@@ -38,6 +39,14 @@ let resizeState = null;
 // --- DOM refs ---
 const {
   form,
+  authGate,
+  authForm,
+  authEmailInput,
+  authMessage,
+  authUserArea,
+  authUserEmail,
+  authSignOutBtn,
+  authProtectedElements,
   titleInput,
   groupInput,
   dueDateInput,
@@ -76,6 +85,8 @@ document.addEventListener("DOMContentLoaded", initializeApp);
 // ── INIT ──────────────────────────────────────────────────────────────────────
 
 async function initializeApp() {
+  authService.subscribe(applyAuthState);
+
   window.SuperTaskBootstrap.initializePreferences({
     state,
     dueDateInput,
@@ -94,6 +105,8 @@ async function initializeApp() {
   renderGroups();
   updateGroupDatalist();
   renderTasks();
+
+  await authService.init();
 }
 
 // ── EVENT LISTENERS ───────────────────────────────────────────────────────────
@@ -119,6 +132,8 @@ function attachEventListeners() {
     },
     handlers: {
       handleTaskSubmit,
+      handleAuthSubmit,
+      handleAuthSignOut,
       handleComposerClick,
       handleComposerInput,
       handleComposerKeydown,
@@ -164,6 +179,63 @@ function handleDocumentKeydown(event) {
   if (event.key === "Escape" && state.groupModal.open) {
     closeGroupModal();
   }
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  const email = authEmailInput?.value.trim();
+  if (!email) return;
+
+  setAuthMessage("Sending sign-in link...", false);
+  const result = await authService.sendMagicLink(email);
+  setAuthMessage(result.message, !result.ok);
+  if (result.ok && authForm) {
+    authForm.reset();
+  }
+}
+
+async function handleAuthSignOut() {
+  const result = await authService.signOut();
+  setAuthMessage(result.message, !result.ok);
+}
+
+function applyAuthState(nextAuthState) {
+  state.auth = nextAuthState;
+  renderAuthState();
+}
+
+function renderAuthState() {
+  const requiresSignIn = state.auth.mode === "supabase";
+  const isSignedIn = state.auth.status === "signed-in";
+  const showProtected = !requiresSignIn || isSignedIn;
+
+  authProtectedElements.forEach(element => {
+    element.classList.toggle("is-auth-hidden", !showProtected);
+  });
+
+  if (authGate) {
+    authGate.hidden = showProtected || state.auth.mode === "disabled";
+  }
+
+  if (authUserArea) {
+    authUserArea.hidden = !isSignedIn;
+  }
+
+  if (authUserEmail) {
+    authUserEmail.textContent = state.auth.user?.email || "Signed in";
+  }
+
+  if (authSignOutBtn) {
+    authSignOutBtn.hidden = !isSignedIn;
+  }
+
+  setAuthMessage(state.auth.message || "", false);
+}
+
+function setAuthMessage(message, isError) {
+  if (!authMessage) return;
+  authMessage.textContent = message;
+  authMessage.classList.toggle("is-error", !!isError);
 }
 
 function toggleViewMode() {

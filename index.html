@@ -22,7 +22,11 @@
       </div>
       <div class="hero-right">
         <span class="status-pill" id="storage-status">Loading storage...</span>
-        <div class="hero-buttons">
+        <div class="auth-user-area" id="auth-user-area" hidden>
+          <span class="status-pill auth-user-email" id="auth-user-email"></span>
+          <button class="ghost-button" id="auth-sign-out-btn" type="button">Sign out</button>
+        </div>
+        <div class="hero-buttons auth-protected">
           <button class="ghost-button" id="toggle-view-btn" type="button" aria-pressed="false">Card view</button>
           <button class="ghost-button" id="toggle-groups-btn" type="button">Groups &#9660;</button>
           <button class="ghost-button" id="export-btn" type="button">Export backup</button>
@@ -31,7 +35,22 @@
       </div>
     </section>
 
-    <section class="groups-panel" id="groups-panel" hidden>
+    <section class="auth-gate" id="auth-gate" hidden>
+      <div class="auth-gate-copy">
+        <p class="eyebrow">Secure access</p>
+        <h2>Sign in to unlock synced access</h2>
+        <p id="auth-message" class="auth-message">Enter your email and we will send a magic sign-in link.</p>
+      </div>
+      <form class="auth-form" id="auth-form">
+        <label>
+          <span>Email</span>
+          <input id="auth-email" type="email" autocomplete="email" placeholder="you@example.com" required>
+        </label>
+        <button class="primary-button" type="submit">Send sign-in link</button>
+      </form>
+    </section>
+
+    <section class="groups-panel auth-protected" id="groups-panel" hidden>
       <div class="groups-panel-head">
         <span class="groups-panel-title">Manage Groups</span>
         <form class="add-group-form" id="add-group-form">
@@ -42,7 +61,7 @@
       <div class="groups-list" id="groups-list"></div>
     </section>
 
-    <section class="composer-panel">
+    <section class="composer-panel auth-protected">
       <form id="task-form" class="task-form">
         <label>
           <span>Task</span>
@@ -83,7 +102,7 @@
       </form>
     </section>
 
-    <section class="board-panel">
+    <section class="board-panel auth-protected">
       <div class="table-frame">
         <table class="task-table" id="task-table" aria-label="Tasks">
           <colgroup>
@@ -133,7 +152,7 @@
       </div>
     </section>
 
-    <section class="group-modal" id="group-modal" hidden aria-hidden="true">
+    <section class="group-modal auth-protected" id="group-modal" hidden aria-hidden="true">
       <div class="group-modal-backdrop" data-close-group-modal="true"></div>
       <div class="group-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="group-modal-title">
         <div class="group-modal-header">
@@ -227,9 +246,11 @@
     </tr>
   </template>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="core.js"></script>
   <script src="dom.js"></script>
   <script src="bootstrap.js"></script>
+  <script src="auth.js"></script>
   <script src="storage.js"></script>
   <script src="repositories.js"></script>
   <script src="app.js"></script>

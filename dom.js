@@ -2,6 +2,14 @@ window.SuperTaskDom = (() => {
   function getDomRefs(doc = document) {
     return {
       form: doc.querySelector("#task-form"),
+      authGate: doc.querySelector("#auth-gate"),
+      authForm: doc.querySelector("#auth-form"),
+      authEmailInput: doc.querySelector("#auth-email"),
+      authMessage: doc.querySelector("#auth-message"),
+      authUserArea: doc.querySelector("#auth-user-area"),
+      authUserEmail: doc.querySelector("#auth-user-email"),
+      authSignOutBtn: doc.querySelector("#auth-sign-out-btn"),
+      authProtectedElements: Array.from(doc.querySelectorAll(".auth-protected")),
       titleInput: doc.querySelector("#task-title"),
       groupInput: doc.querySelector("#task-group"),
       dueDateInput: doc.querySelector("#task-due-date"),

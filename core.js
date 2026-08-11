@@ -19,6 +19,13 @@ window.SuperTaskCore = (() => {
       tasks: [],
       groups: [],
       storageMode: "indexeddb",
+      auth: {
+        mode: "disabled",
+        status: "disabled",
+        user: null,
+        session: null,
+        message: "Auth not configured. Local mode is active."
+      },
       sort: { key: "order", direction: "asc" },
       colWidths: { ...DEFAULT_COL_WIDTHS },
       editingGroupId: null,
