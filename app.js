@@ -76,19 +76,13 @@ document.addEventListener("DOMContentLoaded", initializeApp);
 // ── INIT ──────────────────────────────────────────────────────────────────────
 
 async function initializeApp() {
-  dueDateInput.value = todayString();
-
-  const savedWidths = localStorage.getItem("super-task-col-widths");
-  if (savedWidths) {
-    try { Object.assign(state.colWidths, JSON.parse(savedWidths)); } catch (_) {}
-  }
-  applyColumnWidths();
-
-  const savedViewMode = localStorage.getItem("super-task-view-mode");
-  if (savedViewMode === "cards") {
-    state.viewMode = "cards";
-  }
-  applyViewMode(false);
+  window.SuperTaskBootstrap.initializePreferences({
+    state,
+    dueDateInput,
+    applyColumnWidths,
+    applyViewMode,
+    todayString
+  });
 
   const loadedState = await appStore.load();
   state.tasks = loadedState.tasks;
@@ -105,42 +99,65 @@ async function initializeApp() {
 // ── EVENT LISTENERS ───────────────────────────────────────────────────────────
 
 function attachEventListeners() {
-  form.addEventListener("submit", handleTaskSubmit);
-  form.addEventListener("click", handleComposerClick);
-  form.addEventListener("input", handleComposerInput);
-  form.addEventListener("keydown", handleComposerKeydown);
-  form.addEventListener("focusout", handleComposerFocusOut);
-  tableBody.addEventListener("click",         handleTableClick);
-  deleteCompletedBtn.addEventListener("click", handleDeleteCompleted);
-  tableBody.addEventListener("change",    handleTableChange);
-  tableBody.addEventListener("input",     handleTableInput);
-  tableBody.addEventListener("keydown",   handleTableKeydown);
-  tableBody.addEventListener("focusout",  handleTableFocusOut);
-  tableBody.addEventListener("mousedown", (e) => { dragHandleActive = !!e.target.closest(".drag-handle"); });
-  tableBody.addEventListener("dragstart", handleDragStart);
-  tableBody.addEventListener("dragover",  handleDragOver);
-  tableBody.addEventListener("dragleave", handleDragLeave);
-  tableBody.addEventListener("drop",      handleDrop);
-  tableBody.addEventListener("dragend",   handleDragEnd);
-  sortButtons.forEach(btn => btn.addEventListener("click", handleSortClick));
-  toggleGroupsBtn.addEventListener("click", toggleGroupsPanel);
-  toggleViewBtn.addEventListener("click", toggleViewMode);
-  addGroupForm.addEventListener("submit", handleAddGroup);
-  groupsList.addEventListener("click",   handleGroupsListClick);
-  groupsList.addEventListener("keydown", handleGroupsListKeydown);
-  groupCardBoard.addEventListener("change", handleCardBoardChange);
-  groupCardBoard.addEventListener("click", handleCardBoardClick);
-  groupModalTableBody.addEventListener("click", handleGroupModalTableClick);
-  groupModalTableBody.addEventListener("change", handleGroupModalTableChange);
-  groupModalTableBody.addEventListener("input", handleGroupModalTableInput);
-  groupModalTableBody.addEventListener("keydown", handleGroupModalTableKeydown);
-  groupModalTableBody.addEventListener("focusout", handleGroupModalTableFocusOut);
-  groupModalCloseBtn.addEventListener("click", closeGroupModal);
-  groupModalAddTaskBtn.addEventListener("click", handleGroupModalAddTask);
-  groupModal.addEventListener("click", handleGroupModalShellClick);
-  document.addEventListener("keydown", handleDocumentKeydown);
-  exportBtn.addEventListener("click",   exportBackup);
-  importFile.addEventListener("change", handleImportFile);
+  window.SuperTaskBootstrap.attachEventListeners({
+    dom: {
+      form,
+      tableBody,
+      deleteCompletedBtn,
+      sortButtons,
+      toggleGroupsBtn,
+      toggleViewBtn,
+      addGroupForm,
+      groupsList,
+      groupCardBoard,
+      groupModalTableBody,
+      groupModalCloseBtn,
+      groupModalAddTaskBtn,
+      groupModal,
+      exportBtn,
+      importFile
+    },
+    handlers: {
+      handleTaskSubmit,
+      handleComposerClick,
+      handleComposerInput,
+      handleComposerKeydown,
+      handleComposerFocusOut,
+      handleTableClick,
+      handleDeleteCompleted,
+      handleTableChange,
+      handleTableInput,
+      handleTableKeydown,
+      handleTableFocusOut,
+      handleDragStart,
+      handleDragOver,
+      handleDragLeave,
+      handleDrop,
+      handleDragEnd,
+      handleSortClick,
+      toggleGroupsPanel,
+      toggleViewMode,
+      handleAddGroup,
+      handleGroupsListClick,
+      handleGroupsListKeydown,
+      handleCardBoardChange,
+      handleCardBoardClick,
+      handleGroupModalTableClick,
+      handleGroupModalTableChange,
+      handleGroupModalTableInput,
+      handleGroupModalTableKeydown,
+      handleGroupModalTableFocusOut,
+      closeGroupModal,
+      handleGroupModalAddTask,
+      handleGroupModalShellClick,
+      handleDocumentKeydown,
+      exportBackup,
+      handleImportFile
+    },
+    setDragHandleActive(value) {
+      dragHandleActive = value;
+    }
+  });
 }
 
 function handleDocumentKeydown(event) {
