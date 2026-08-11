@@ -8,7 +8,6 @@ const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2, None: 3 };
 const DEFAULT_COL_WIDTHS = { "col-item": 360, "col-group": 200, "col-due": 160, "col-priority": 140, "col-notes": 220 };
 
 const state = {
-  db: null,
   tasks: [],
   groups: [],
   storageMode: "indexeddb",
@@ -19,7 +18,14 @@ const state = {
   groupModal: { open: false, groupName: "" }
 };
 
-const appStore = createAppStore();
+const appStore = window.SuperTaskStorage.createAppStore({
+  dbName: DB_NAME,
+  dbVersion: DB_VERSION,
+  taskStoreName: STORE_TASKS,
+  groupStoreName: STORE_GROUPS,
+  setStorageStatus,
+  getState: () => state
+});
 
 // Drag state
 let dragSrcId = null;
@@ -1257,139 +1263,6 @@ async function syncTasks() {
   await appStore.saveTasks(state.tasks);
 }
 
-function createAppStore() {
-  return {
-    async load() {
-      try {
-        state.db = await openDatabase();
-        state.storageMode = "indexeddb";
-        setStorageStatus("IndexedDB ready", false);
-        return {
-          tasks: await readAllFromStore(STORE_TASKS),
-          groups: await readAllFromStore(STORE_GROUPS)
-        };
-      } catch (err) {
-        console.error("IndexedDB unavailable, using localStorage.", err);
-        state.storageMode = "localstorage";
-        setStorageStatus("Using local fallback", true);
-        const fallback = readLocalFallback();
-        return {
-          tasks: fallback.tasks || [],
-          groups: fallback.groups || []
-        };
-      }
-    },
-
-    async saveTasks(tasks) {
-      if (state.storageMode === "indexeddb") {
-        await persistAllToStore(STORE_TASKS, tasks);
-        return;
-      }
-      writeLocalFallback({ tasks, groups: state.groups });
-    },
-
-    async saveGroups(groups) {
-      if (state.storageMode === "indexeddb") {
-        await persistAllToStore(STORE_GROUPS, groups);
-        return;
-      }
-      writeLocalFallback({ tasks: state.tasks, groups });
-    },
-
-    async saveAll(nextState) {
-      if (state.storageMode === "indexeddb") {
-        await persistAllToStore(STORE_TASKS, nextState.tasks);
-        await persistAllToStore(STORE_GROUPS, nextState.groups);
-        return;
-      }
-      writeLocalFallback(nextState);
-    },
-
-    async saveGroup(group) {
-      if (state.storageMode !== "indexeddb") {
-        writeLocalFallback({ tasks: state.tasks, groups: state.groups });
-        return;
-      }
-      await saveGroupToDb(group);
-    },
-
-    async deleteGroup(groupId) {
-      if (state.storageMode !== "indexeddb") {
-        writeLocalFallback({ tasks: state.tasks, groups: state.groups });
-        return;
-      }
-      await deleteGroupFromDb(groupId);
-    }
-  };
-}
-
-// ── DATABASE ──────────────────────────────────────────────────────────────────
-
-function openDatabase() {
-  return new Promise((resolve, reject) => {
-    if (!window.indexedDB) { reject(new Error("IndexedDB not supported.")); return; }
-    const req = window.indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (event) => {
-      const db = req.result;
-      if (event.oldVersion < 1 && !db.objectStoreNames.contains(STORE_TASKS)) {
-        db.createObjectStore(STORE_TASKS, { keyPath: "id" });
-      }
-      if (event.oldVersion < 2 && !db.objectStoreNames.contains(STORE_GROUPS)) {
-        db.createObjectStore(STORE_GROUPS, { keyPath: "id" });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror   = () => reject(req.error || new Error("Cannot open DB."));
-  });
-}
-
-function readAllFromStore(storeName) {
-  return new Promise((resolve, reject) => {
-    const tx  = state.db.transaction(storeName, "readonly");
-    const req = tx.objectStore(storeName).getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror   = () => reject(req.error);
-  });
-}
-
-function persistAllToStore(storeName, items) {
-  return new Promise((resolve, reject) => {
-    const tx = state.db.transaction(storeName, "readwrite");
-    const store = tx.objectStore(storeName);
-    const clearReq = store.clear();
-    clearReq.onsuccess = () => { items.forEach(item => store.put(item)); };
-    clearReq.onerror   = () => reject(clearReq.error);
-    tx.oncomplete = () => resolve();
-    tx.onerror    = () => reject(tx.error);
-  });
-}
-
-function saveGroupToDb(group) {
-  if (state.storageMode !== "indexeddb") {
-    writeLocalFallback({ tasks: state.tasks, groups: state.groups });
-    return Promise.resolve();
-  }
-  return new Promise((resolve, reject) => {
-    const tx  = state.db.transaction(STORE_GROUPS, "readwrite");
-    const req = tx.objectStore(STORE_GROUPS).put(group);
-    req.onsuccess = () => resolve();
-    req.onerror   = () => reject(req.error);
-  });
-}
-
-function deleteGroupFromDb(id) {
-  if (state.storageMode !== "indexeddb") {
-    writeLocalFallback({ tasks: state.tasks, groups: state.groups });
-    return Promise.resolve();
-  }
-  return new Promise((resolve, reject) => {
-    const tx  = state.db.transaction(STORE_GROUPS, "readwrite");
-    const req = tx.objectStore(STORE_GROUPS).delete(id);
-    req.onsuccess = () => resolve();
-    req.onerror   = () => reject(req.error);
-  });
-}
-
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
 
 function createId() {
@@ -1416,16 +1289,4 @@ function todayString() {
 function setStorageStatus(msg, warn) {
   storageStatus.textContent = msg;
   storageStatus.classList.toggle("warning", warn);
-}
-
-function readLocalFallback() {
-  try {
-    const raw    = localStorage.getItem("super-task-fallback");
-    const parsed = raw ? JSON.parse(raw) : {};
-    return Array.isArray(parsed) ? { tasks: parsed, groups: [] } : parsed;
-  } catch (_) { return { tasks: [], groups: [] }; }
-}
-
-function writeLocalFallback(data) {
-  localStorage.setItem("super-task-fallback", JSON.stringify(data));
 }
