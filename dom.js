@@ -1,0 +1,40 @@
+window.SuperTaskDom = (() => {
+  function getDomRefs(doc = document) {
+    return {
+      form: doc.querySelector("#task-form"),
+      titleInput: doc.querySelector("#task-title"),
+      groupInput: doc.querySelector("#task-group"),
+      dueDateInput: doc.querySelector("#task-due-date"),
+      priorityInput: doc.querySelector("#task-priority"),
+      notesInput: doc.querySelector("#task-notes"),
+      composerNotesCell: doc.querySelector(".composer-notes-cell"),
+      composerNotesPreview: doc.querySelector("#composer-notes-preview"),
+      composerNotesEditor: doc.querySelector("#composer-notes-editor"),
+      composerNotesCount: doc.querySelector("#composer-notes-count"),
+      tableFrame: doc.querySelector(".table-frame"),
+      tableBody: doc.querySelector("#task-table-body"),
+      groupCardBoard: doc.querySelector("#group-card-board"),
+      groupModal: doc.querySelector("#group-modal"),
+      groupModalTitle: doc.querySelector("#group-modal-title"),
+      groupModalTableBody: doc.querySelector("#group-modal-table-body"),
+      groupModalAddTaskBtn: doc.querySelector("#group-modal-add-task-btn"),
+      groupModalCloseBtn: doc.querySelector("#group-modal-close-btn"),
+      taskCount: doc.querySelector("#task-count"),
+      deleteCompletedBtn: doc.querySelector("#delete-completed-btn"),
+      rowTemplate: doc.querySelector("#task-row-template"),
+      storageStatus: doc.querySelector("#storage-status"),
+      sortButtons: Array.from(doc.querySelectorAll(".sort-button")),
+      groupDatalist: doc.querySelector("#group-datalist"),
+      groupsPanel: doc.querySelector("#groups-panel"),
+      groupsList: doc.querySelector("#groups-list"),
+      toggleGroupsBtn: doc.querySelector("#toggle-groups-btn"),
+      toggleViewBtn: doc.querySelector("#toggle-view-btn"),
+      addGroupForm: doc.querySelector("#add-group-form"),
+      newGroupNameInput: doc.querySelector("#new-group-name"),
+      exportBtn: doc.querySelector("#export-btn"),
+      importFile: doc.querySelector("#import-file")
+    };
+  }
+
+  return { getDomRefs };
+})();

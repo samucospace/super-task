@@ -36,38 +36,40 @@ let dragHandleActive = false;
 let resizeState = null;
 
 // --- DOM refs ---
-const form              = document.querySelector("#task-form");
-const titleInput        = document.querySelector("#task-title");
-const groupInput        = document.querySelector("#task-group");
-const dueDateInput      = document.querySelector("#task-due-date");
-const priorityInput     = document.querySelector("#task-priority");
-const notesInput        = document.querySelector("#task-notes");
-const composerNotesCell = document.querySelector(".composer-notes-cell");
-const composerNotesPreview = document.querySelector("#composer-notes-preview");
-const composerNotesEditor = document.querySelector("#composer-notes-editor");
-const composerNotesCount = document.querySelector("#composer-notes-count");
-const tableFrame        = document.querySelector(".table-frame");
-const tableBody         = document.querySelector("#task-table-body");
-const groupCardBoard    = document.querySelector("#group-card-board");
-const groupModal        = document.querySelector("#group-modal");
-const groupModalTitle   = document.querySelector("#group-modal-title");
-const groupModalTableBody = document.querySelector("#group-modal-table-body");
-const groupModalAddTaskBtn = document.querySelector("#group-modal-add-task-btn");
-const groupModalCloseBtn = document.querySelector("#group-modal-close-btn");
-const taskCount             = document.querySelector("#task-count");
-const deleteCompletedBtn    = document.querySelector("#delete-completed-btn");
-const rowTemplate       = document.querySelector("#task-row-template");
-const storageStatus     = document.querySelector("#storage-status");
-const sortButtons       = Array.from(document.querySelectorAll(".sort-button"));
-const groupDatalist     = document.querySelector("#group-datalist");
-const groupsPanel       = document.querySelector("#groups-panel");
-const groupsList        = document.querySelector("#groups-list");
-const toggleGroupsBtn   = document.querySelector("#toggle-groups-btn");
-const toggleViewBtn     = document.querySelector("#toggle-view-btn");
-const addGroupForm      = document.querySelector("#add-group-form");
-const newGroupNameInput = document.querySelector("#new-group-name");
-const exportBtn         = document.querySelector("#export-btn");
-const importFile        = document.querySelector("#import-file");
+const {
+  form,
+  titleInput,
+  groupInput,
+  dueDateInput,
+  priorityInput,
+  notesInput,
+  composerNotesCell,
+  composerNotesPreview,
+  composerNotesEditor,
+  composerNotesCount,
+  tableFrame,
+  tableBody,
+  groupCardBoard,
+  groupModal,
+  groupModalTitle,
+  groupModalTableBody,
+  groupModalAddTaskBtn,
+  groupModalCloseBtn,
+  taskCount,
+  deleteCompletedBtn,
+  rowTemplate,
+  storageStatus,
+  sortButtons,
+  groupDatalist,
+  groupsPanel,
+  groupsList,
+  toggleGroupsBtn,
+  toggleViewBtn,
+  addGroupForm,
+  newGroupNameInput,
+  exportBtn,
+  importFile
+} = window.SuperTaskDom.getDomRefs();
 
 document.addEventListener("DOMContentLoaded", initializeApp);
 
