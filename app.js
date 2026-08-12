@@ -115,6 +115,8 @@ function attachEventListeners() {
   window.SuperTaskBootstrap.attachEventListeners({
     dom: {
       form,
+      authForm,
+      authSignOutBtn,
       tableBody,
       deleteCompletedBtn,
       sortButtons,
