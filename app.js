@@ -35,6 +35,8 @@ let dragHandleActive = false;
 
 // Resize state
 let resizeState = null;
+let cloudBootstrapUserId = null;
+let cloudBootstrapInFlight = false;
 
 // --- DOM refs ---
 const {
@@ -202,21 +204,41 @@ async function handleAuthSignOut() {
 }
 
 function applyAuthState(nextAuthState) {
+  const previousUserId = state.auth.user?.id || null;
   state.auth = nextAuthState;
   renderAuthState();
+  void handleAuthTransition(previousUserId);
+}
+
+async function handleAuthTransition(previousUserId) {
+  const currentUserId = state.auth.user?.id || null;
+  const isSignedIn = state.auth.status === "signed-in";
+
+  if (!isSignedIn) {
+    cloudBootstrapUserId = null;
+    restoreLocalStorageStatus();
+    return;
+  }
+
+  if (!currentUserId || cloudBootstrapInFlight || cloudBootstrapUserId === currentUserId) {
+    return;
+  }
+
+  await loadCloudDataForUser(currentUserId, previousUserId);
 }
 
 function renderAuthState() {
   const requiresSignIn = state.auth.mode === "supabase";
   const isSignedIn = state.auth.status === "signed-in";
-  const showProtected = !requiresSignIn || isSignedIn;
+  const localTestingMode = requiresSignIn && !isSignedIn;
+  const showProtected = !requiresSignIn || isSignedIn || localTestingMode;
 
   authProtectedElements.forEach(element => {
     element.classList.toggle("is-auth-hidden", !showProtected);
   });
 
   if (authGate) {
-    authGate.hidden = showProtected || state.auth.mode === "disabled";
+    authGate.hidden = state.auth.mode === "disabled" || isSignedIn;
   }
 
   if (authUserArea) {
@@ -238,6 +260,112 @@ function setAuthMessage(message, isError) {
   if (!authMessage) return;
   authMessage.textContent = message;
   authMessage.classList.toggle("is-error", !!isError);
+}
+
+async function loadCloudDataForUser(userId, previousUserId) {
+  const client = authService.getClient();
+  if (!client || !userId) return;
+
+  cloudBootstrapInFlight = true;
+  setStorageStatus("Loading cloud data...", false);
+
+  try {
+    const [tasksResult, groupsResult] = await Promise.all([
+      client
+        .from("tasks")
+        .select("id, title, group_name, due_date, priority, notes, completed, sort_order")
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .order("sort_order", { ascending: true }),
+      client
+        .from("groups")
+        .select("id, name")
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .order("name", { ascending: true })
+    ]);
+
+    if (tasksResult.error) throw tasksResult.error;
+    if (groupsResult.error) throw groupsResult.error;
+
+    const cloudTasks = mapCloudTasks(tasksResult.data || []);
+    const cloudGroups = mapCloudGroups(groupsResult.data || []);
+    const hasCloudData = cloudTasks.length > 0 || cloudGroups.length > 0;
+
+    if (hasCloudData) {
+      state.tasks = cloudTasks;
+      state.groups = mergeGroupsFromTasks(cloudGroups, cloudTasks);
+      await repositories.importData({ tasks: state.tasks, groups: state.groups });
+      renderGroups();
+      updateGroupDatalist();
+      renderTasks();
+      setAuthMessage("Signed in. Loaded cloud data for this account.", false);
+    } else if (!previousUserId || previousUserId !== userId) {
+      setAuthMessage("Signed in. No cloud data yet, continuing with local data.", false);
+    }
+
+    cloudBootstrapUserId = userId;
+    setStorageStatus("Cloud account connected", false);
+  } catch (err) {
+    console.error("Cloud bootstrap failed.", err);
+    setAuthMessage(`Signed in, but cloud load failed: ${err.message || "Unknown error"}. Using local data.`, true);
+    setStorageStatus("Cloud load failed, using local data", true);
+  } finally {
+    cloudBootstrapInFlight = false;
+  }
+}
+
+function mapCloudTasks(rows) {
+  return rows.map((row, index) => {
+    const rawPriority = typeof row.priority === "string" ? row.priority : "Low";
+    const priority = Object.prototype.hasOwnProperty.call(PRIORITY_ORDER, rawPriority) ? rawPriority : "Low";
+    const title = typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Untitled task";
+    const group = typeof row.group_name === "string" && row.group_name.trim() ? row.group_name.trim() : "General";
+
+    return {
+      id: row.id || createId(),
+      title,
+      group,
+      dueDate: row.due_date || todayString(),
+      priority,
+      notes: normalizeNotes(typeof row.notes === "string" ? row.notes : ""),
+      completed: !!row.completed,
+      order: Number.isFinite(row.sort_order) ? row.sort_order : index
+    };
+  });
+}
+
+function mapCloudGroups(rows) {
+  return rows
+    .filter(row => typeof row.name === "string" && row.name.trim())
+    .map(row => ({
+      id: row.id || createId(),
+      name: row.name.trim()
+    }));
+}
+
+function mergeGroupsFromTasks(groups, tasks) {
+  const merged = [...groups];
+  const knownGroups = new Set(merged.map(group => group.name.toLowerCase()));
+
+  tasks.forEach(task => {
+    const name = task.group.trim();
+    const lower = name.toLowerCase();
+    if (!knownGroups.has(lower)) {
+      merged.push({ id: createId(), name });
+      knownGroups.add(lower);
+    }
+  });
+
+  return merged;
+}
+
+function restoreLocalStorageStatus() {
+  if (state.storageMode === "localstorage") {
+    setStorageStatus("Using local fallback", true);
+    return;
+  }
+  setStorageStatus("IndexedDB ready", false);
 }
 
 function toggleViewMode() {
