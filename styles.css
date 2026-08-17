@@ -768,6 +768,10 @@ h1 {
   opacity: 0.35;
 }
 
+.row-pending-sync td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-accent-amber);
+}
+
 .drop-above td {
   border-top: 2px solid rgba(59, 130, 246, 0.92) !important;
 }

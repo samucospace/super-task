@@ -39,6 +39,9 @@ window.SuperTaskBootstrap = (() => {
     if (dom.authSignOutBtn) {
       dom.authSignOutBtn.addEventListener("click", handlers.handleAuthSignOut);
     }
+    if (dom.authRefreshBtn) {
+      dom.authRefreshBtn.addEventListener("click", handlers.handleAuthRefresh);
+    }
     dom.form.addEventListener("click", handlers.handleComposerClick);
     dom.form.addEventListener("input", handlers.handleComposerInput);
     dom.form.addEventListener("keydown", handlers.handleComposerKeydown);

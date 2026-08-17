@@ -43,7 +43,6 @@ let dragHandleActive = false;
 let resizeState = null;
 let cloudBootstrapUserId = null;
 let cloudBootstrapInFlight = false;
-const CLOUD_LAST_USER_KEY = "super-task-cloud-last-user";
 
 // --- DOM refs ---
 const {
@@ -54,6 +53,7 @@ const {
   authMessage,
   authUserArea,
   authUserEmail,
+  authRefreshBtn,
   authSignOutBtn,
   authProtectedElements,
   titleInput,
@@ -77,6 +77,7 @@ const {
   deleteCompletedBtn,
   rowTemplate,
   storageStatus,
+  syncStatusPill,
   sortButtons,
   groupDatalist,
   groupsPanel,
@@ -114,6 +115,12 @@ async function initializeApp() {
   renderGroups();
   updateGroupDatalist();
   renderTasks();
+  renderSyncStatus();
+
+  window.addEventListener("online", () => flushSyncQueue());
+  setInterval(() => {
+    if (window.SuperTaskSyncQueue.getPendingCount() > 0) flushSyncQueue();
+  }, 30000);
 
   await authService.init();
 }
@@ -125,6 +132,7 @@ function attachEventListeners() {
     dom: {
       form,
       authForm,
+      authRefreshBtn,
       authSignOutBtn,
       tableBody,
       deleteCompletedBtn,
@@ -145,6 +153,7 @@ function attachEventListeners() {
       handleTaskSubmit,
       handleAuthSubmit,
       handleAuthSignOut,
+      handleAuthRefresh,
       handleComposerClick,
       handleComposerInput,
       handleComposerKeydown,
@@ -210,10 +219,17 @@ async function handleAuthSignOut() {
   setAuthMessage(result.message, !result.ok);
 }
 
+async function handleAuthRefresh() {
+  const userId = state.auth.user?.id || null;
+  if (!userId || cloudBootstrapInFlight) return;
+  await loadCloudDataForUser(userId, userId);
+}
+
 function applyAuthState(nextAuthState) {
   const previousUserId = state.auth.user?.id || null;
   state.auth = nextAuthState;
   renderAuthState();
+  renderSyncStatus();
   void handleAuthTransition(previousUserId);
 }
 
@@ -231,15 +247,10 @@ async function handleAuthTransition(previousUserId) {
     return;
   }
 
-  // Local writes are already synced to the cloud, so a resumed session on the
-  // same device/user should trust local data instead of pulling a snapshot
-  // that could be stale relative to an in-flight or very recent local edit.
-  const isResumingSameUser = localStorage.getItem(CLOUD_LAST_USER_KEY) === currentUserId;
-  const hasLocalData = state.tasks.length > 0 || state.groups.length > 0;
-
-  await loadCloudDataForUser(currentUserId, previousUserId, {
-    skipPull: isResumingSameUser && hasLocalData
-  });
+  // Always pull the latest cloud data: with multiple devices (e.g. laptop +
+  // phone), cloud is the shared source of truth. Writes are awaited before
+  // resolving, so a fresh pull reflects this device's own recent edits too.
+  await loadCloudDataForUser(currentUserId, previousUserId);
 }
 
 function renderAuthState() {
@@ -277,20 +288,18 @@ function setAuthMessage(message, isError) {
   authMessage.classList.toggle("is-error", !!isError);
 }
 
-async function loadCloudDataForUser(userId, previousUserId, options = {}) {
+async function loadCloudDataForUser(userId, previousUserId) {
   const client = authService.getClient();
   if (!client || !userId) return;
 
-  if (options.skipPull) {
-    cloudBootstrapUserId = userId;
-    localStorage.setItem(CLOUD_LAST_USER_KEY, userId);
-    setAuthMessage("Signed in. Using this device's already-synced data.", false);
-    setStorageStatus("Cloud account connected", false);
-    return;
-  }
-
   cloudBootstrapInFlight = true;
   setStorageStatus("Loading cloud data...", false);
+
+  // Push any pending offline edits before pulling, so this device's own
+  // recent changes aren't lost by the pull that treats cloud as truth.
+  if (window.SuperTaskSyncQueue.getPendingCount() > 0) {
+    await flushSyncQueue();
+  }
 
   try {
     const [tasksResult, groupsResult] = await Promise.all([
@@ -328,7 +337,6 @@ async function loadCloudDataForUser(userId, previousUserId, options = {}) {
     }
 
     cloudBootstrapUserId = userId;
-    localStorage.setItem(CLOUD_LAST_USER_KEY, userId);
     setStorageStatus("Cloud account connected", false);
   } catch (err) {
     console.error("Cloud bootstrap failed.", err);
@@ -394,6 +402,15 @@ function restoreLocalStorageStatus() {
 
 // ── CLOUD WRITE SYNC ──────────────────────────────────────────────────────────
 
+let queueFlushTimer = null;
+let queueFlushInFlight = false;
+
+// Cloud sync is "enabled" (worth queuing for) whenever Supabase is configured,
+// even while signed out, so edits made before/between sign-ins aren't lost.
+function isCloudSyncEnabled() {
+  return state.auth.mode === "supabase";
+}
+
 function getCloudContext() {
   const client = authService.getClient();
   const userId = state.auth.user?.id || null;
@@ -417,43 +434,186 @@ function toCloudTaskRow(task, userId) {
   };
 }
 
+function toCloudGroupRow(group, userId) {
+  return { id: group.id, user_id: userId, name: group.name, updated_at: new Date().toISOString() };
+}
+
 async function cloudUpsertTasks(tasks) {
+  if (!isCloudSyncEnabled() || !tasks.length) return;
   const ctx = getCloudContext();
-  if (!ctx || !tasks.length) return;
-  const rows = tasks.map(task => toCloudTaskRow(task, ctx.userId));
-  const result = await ctx.client.from("tasks").upsert(rows, { onConflict: "id" });
-  if (result.error) console.error("Cloud task upsert failed.", result.error);
+
+  if (!ctx) {
+    // Not signed in yet: queue the raw task so it syncs once the user signs in.
+    tasks.forEach(task => window.SuperTaskSyncQueue.enqueue("task", task.id, "upsert", task));
+    renderSyncStatus();
+    return;
+  }
+
+  try {
+    const rows = tasks.map(task => toCloudTaskRow(task, ctx.userId));
+    const result = await ctx.client.from("tasks").upsert(rows, { onConflict: "id" });
+    if (result.error) throw result.error;
+    tasks.forEach(task => window.SuperTaskSyncQueue.removeOps("task", task.id));
+  } catch (err) {
+    console.error("Cloud task upsert failed, queued for retry.", err);
+    tasks.forEach(task => window.SuperTaskSyncQueue.enqueue("task", task.id, "upsert", task));
+    scheduleQueueFlush();
+  }
+  renderSyncStatus();
 }
 
 async function cloudDeleteTasks(taskIds) {
+  if (!isCloudSyncEnabled() || !taskIds.length) return;
   const ctx = getCloudContext();
-  if (!ctx || !taskIds.length) return;
-  const result = await ctx.client
-    .from("tasks")
-    .update({ deleted_at: new Date().toISOString() })
-    .in("id", taskIds)
-    .eq("user_id", ctx.userId);
-  if (result.error) console.error("Cloud task delete failed.", result.error);
+
+  if (!ctx) {
+    taskIds.forEach(id => window.SuperTaskSyncQueue.enqueue("task", id, "delete", null));
+    renderSyncStatus();
+    return;
+  }
+
+  try {
+    const result = await ctx.client
+      .from("tasks")
+      .update({ deleted_at: new Date().toISOString() })
+      .in("id", taskIds)
+      .eq("user_id", ctx.userId);
+    if (result.error) throw result.error;
+    taskIds.forEach(id => window.SuperTaskSyncQueue.removeOps("task", id));
+  } catch (err) {
+    console.error("Cloud task delete failed, queued for retry.", err);
+    taskIds.forEach(id => window.SuperTaskSyncQueue.enqueue("task", id, "delete", null));
+    scheduleQueueFlush();
+  }
+  renderSyncStatus();
 }
 
 async function cloudUpsertGroup(group) {
+  if (!isCloudSyncEnabled()) return;
   const ctx = getCloudContext();
-  if (!ctx) return;
-  const row = { id: group.id, user_id: ctx.userId, name: group.name, updated_at: new Date().toISOString() };
-  const result = await ctx.client.from("groups").upsert(row, { onConflict: "id" });
-  if (result.error) console.error("Cloud group upsert failed.", result.error);
+
+  if (!ctx) {
+    window.SuperTaskSyncQueue.enqueue("group", group.id, "upsert", group);
+    renderSyncStatus();
+    return;
+  }
+
+  try {
+    const row = toCloudGroupRow(group, ctx.userId);
+    const result = await ctx.client.from("groups").upsert(row, { onConflict: "id" });
+    if (result.error) throw result.error;
+    window.SuperTaskSyncQueue.removeOps("group", group.id);
+  } catch (err) {
+    console.error("Cloud group upsert failed, queued for retry.", err);
+    window.SuperTaskSyncQueue.enqueue("group", group.id, "upsert", group);
+    scheduleQueueFlush();
+  }
+  renderSyncStatus();
 }
 
 async function cloudDeleteGroup(groupId) {
+  if (!isCloudSyncEnabled()) return;
   const ctx = getCloudContext();
-  if (!ctx) return;
-  const result = await ctx.client
-    .from("groups")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", groupId)
-    .eq("user_id", ctx.userId);
-  if (result.error) console.error("Cloud group delete failed.", result.error);
+
+  if (!ctx) {
+    window.SuperTaskSyncQueue.enqueue("group", groupId, "delete", null);
+    renderSyncStatus();
+    return;
+  }
+
+  try {
+    const result = await ctx.client
+      .from("groups")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", groupId)
+      .eq("user_id", ctx.userId);
+    if (result.error) throw result.error;
+    window.SuperTaskSyncQueue.removeOps("group", groupId);
+  } catch (err) {
+    console.error("Cloud group delete failed, queued for retry.", err);
+    window.SuperTaskSyncQueue.enqueue("group", groupId, "delete", null);
+    scheduleQueueFlush();
+  }
+  renderSyncStatus();
 }
+
+function scheduleQueueFlush(delayMs) {
+  if (queueFlushTimer) return;
+  const queue = window.SuperTaskSyncQueue.getQueue();
+  const maxAttempts = queue.reduce((max, op) => Math.max(max, op.attempts || 0), 0);
+  const delay = delayMs ?? Math.min(60000, 4000 * Math.pow(2, maxAttempts));
+  queueFlushTimer = setTimeout(() => {
+    queueFlushTimer = null;
+    flushSyncQueue();
+  }, delay);
+}
+
+async function flushSyncQueue() {
+  const ctx = getCloudContext();
+  if (!ctx || queueFlushInFlight) return;
+
+  const queue = window.SuperTaskSyncQueue.getQueue();
+  if (!queue.length) return;
+
+  queueFlushInFlight = true;
+  let anyFailed = false;
+
+  for (const op of queue) {
+    try {
+      if (op.entityType === "task" && op.kind === "upsert") {
+        const row = toCloudTaskRow(op.payload, ctx.userId);
+        const result = await ctx.client.from("tasks").upsert(row, { onConflict: "id" });
+        if (result.error) throw result.error;
+      } else if (op.entityType === "task" && op.kind === "delete") {
+        const result = await ctx.client
+          .from("tasks")
+          .update({ deleted_at: new Date().toISOString() })
+          .eq("id", op.entityId)
+          .eq("user_id", ctx.userId);
+        if (result.error) throw result.error;
+      } else if (op.entityType === "group" && op.kind === "upsert") {
+        const row = toCloudGroupRow(op.payload, ctx.userId);
+        const result = await ctx.client.from("groups").upsert(row, { onConflict: "id" });
+        if (result.error) throw result.error;
+      } else if (op.entityType === "group" && op.kind === "delete") {
+        const result = await ctx.client
+          .from("groups")
+          .update({ deleted_at: new Date().toISOString() })
+          .eq("id", op.entityId)
+          .eq("user_id", ctx.userId);
+        if (result.error) throw result.error;
+      }
+      window.SuperTaskSyncQueue.removeOps(op.entityType, op.entityId);
+    } catch (err) {
+      console.error("Retry failed for queued sync op.", op, err);
+      anyFailed = true;
+      window.SuperTaskSyncQueue.updateOp(op.opId, { attempts: (op.attempts || 0) + 1 });
+    }
+  }
+
+  queueFlushInFlight = false;
+  renderSyncStatus();
+  renderTasks();
+
+  if (anyFailed) {
+    scheduleQueueFlush();
+  }
+}
+
+function renderSyncStatus() {
+  if (!syncStatusPill) return;
+  const pendingCount = window.SuperTaskSyncQueue.getPendingCount();
+  if (!pendingCount || !isCloudSyncEnabled()) {
+    syncStatusPill.hidden = true;
+    return;
+  }
+  syncStatusPill.hidden = false;
+  const suffix = state.auth.status === "signed-in" ? "pending sync" : "pending sync (sign in to push)";
+  syncStatusPill.textContent = `${pendingCount} change${pendingCount === 1 ? "" : "s"} ${suffix}`;
+  syncStatusPill.classList.add("warning");
+}
+
+
 
 function toggleViewMode() {
   state.viewMode = state.viewMode === "list" ? "cards" : "list";
@@ -979,6 +1139,10 @@ function createTaskRow(task, options) {
   row.dataset.rowVariant = rowVariant;
   row.setAttribute("draggable", isManual ? "true" : "false");
   row.classList.toggle("is-complete", task.completed);
+
+  const isPendingSync = isCloudSyncEnabled() && window.SuperTaskSyncQueue.isPending("task", task.id);
+  row.classList.toggle("row-pending-sync", isPendingSync);
+  if (isPendingSync) row.title = "Not yet synced to cloud";
 
   const handle = frag.querySelector(".drag-handle");
   handle.style.opacity = isManual ? "1" : "0.3";
