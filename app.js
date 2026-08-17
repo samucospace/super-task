@@ -26,7 +26,13 @@ const repositories = window.SuperTaskRepositories.createRepositories({
   insertTaskByCurrentSort,
   positionTaskByCurrentSort,
   autoRegisterGroup,
-  syncTasks
+  syncTasks,
+  cloudSync: {
+    upsertTasks: cloudUpsertTasks,
+    deleteTasks: cloudDeleteTasks,
+    upsertGroup: cloudUpsertGroup,
+    deleteGroup: cloudDeleteGroup
+  }
 });
 
 // Drag state
@@ -37,6 +43,7 @@ let dragHandleActive = false;
 let resizeState = null;
 let cloudBootstrapUserId = null;
 let cloudBootstrapInFlight = false;
+const CLOUD_LAST_USER_KEY = "super-task-cloud-last-user";
 
 // --- DOM refs ---
 const {
@@ -224,7 +231,15 @@ async function handleAuthTransition(previousUserId) {
     return;
   }
 
-  await loadCloudDataForUser(currentUserId, previousUserId);
+  // Local writes are already synced to the cloud, so a resumed session on the
+  // same device/user should trust local data instead of pulling a snapshot
+  // that could be stale relative to an in-flight or very recent local edit.
+  const isResumingSameUser = localStorage.getItem(CLOUD_LAST_USER_KEY) === currentUserId;
+  const hasLocalData = state.tasks.length > 0 || state.groups.length > 0;
+
+  await loadCloudDataForUser(currentUserId, previousUserId, {
+    skipPull: isResumingSameUser && hasLocalData
+  });
 }
 
 function renderAuthState() {
@@ -262,9 +277,17 @@ function setAuthMessage(message, isError) {
   authMessage.classList.toggle("is-error", !!isError);
 }
 
-async function loadCloudDataForUser(userId, previousUserId) {
+async function loadCloudDataForUser(userId, previousUserId, options = {}) {
   const client = authService.getClient();
   if (!client || !userId) return;
+
+  if (options.skipPull) {
+    cloudBootstrapUserId = userId;
+    localStorage.setItem(CLOUD_LAST_USER_KEY, userId);
+    setAuthMessage("Signed in. Using this device's already-synced data.", false);
+    setStorageStatus("Cloud account connected", false);
+    return;
+  }
 
   cloudBootstrapInFlight = true;
   setStorageStatus("Loading cloud data...", false);
@@ -305,6 +328,7 @@ async function loadCloudDataForUser(userId, previousUserId) {
     }
 
     cloudBootstrapUserId = userId;
+    localStorage.setItem(CLOUD_LAST_USER_KEY, userId);
     setStorageStatus("Cloud account connected", false);
   } catch (err) {
     console.error("Cloud bootstrap failed.", err);
@@ -366,6 +390,69 @@ function restoreLocalStorageStatus() {
     return;
   }
   setStorageStatus("IndexedDB ready", false);
+}
+
+// ── CLOUD WRITE SYNC ──────────────────────────────────────────────────────────
+
+function getCloudContext() {
+  const client = authService.getClient();
+  const userId = state.auth.user?.id || null;
+  if (!client || !userId || state.auth.status !== "signed-in") return null;
+  return { client, userId };
+}
+
+function toCloudTaskRow(task, userId) {
+  return {
+    id: task.id,
+    user_id: userId,
+    title: task.title,
+    group_name: task.group,
+    due_date: task.dueDate || null,
+    priority: task.priority,
+    notes: task.notes || "",
+    completed: !!task.completed,
+    sort_order: task.order,
+    // set explicitly since DB trigger may not be present/active
+    updated_at: new Date().toISOString()
+  };
+}
+
+async function cloudUpsertTasks(tasks) {
+  const ctx = getCloudContext();
+  if (!ctx || !tasks.length) return;
+  const rows = tasks.map(task => toCloudTaskRow(task, ctx.userId));
+  const result = await ctx.client.from("tasks").upsert(rows, { onConflict: "id" });
+  if (result.error) console.error("Cloud task upsert failed.", result.error);
+}
+
+async function cloudDeleteTasks(taskIds) {
+  const ctx = getCloudContext();
+  if (!ctx || !taskIds.length) return;
+  const result = await ctx.client
+    .from("tasks")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", taskIds)
+    .eq("user_id", ctx.userId);
+  if (result.error) console.error("Cloud task delete failed.", result.error);
+}
+
+async function cloudUpsertGroup(group) {
+  const ctx = getCloudContext();
+  if (!ctx) return;
+  const row = { id: group.id, user_id: ctx.userId, name: group.name, updated_at: new Date().toISOString() };
+  const result = await ctx.client.from("groups").upsert(row, { onConflict: "id" });
+  if (result.error) console.error("Cloud group upsert failed.", result.error);
+}
+
+async function cloudDeleteGroup(groupId) {
+  const ctx = getCloudContext();
+  if (!ctx) return;
+  const result = await ctx.client
+    .from("groups")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", groupId)
+    .eq("user_id", ctx.userId);
+  if (result.error) console.error("Cloud group delete failed.", result.error);
 }
 
 function toggleViewMode() {
@@ -842,6 +929,7 @@ async function autoRegisterGroup(name) {
   const group = { id: createId(), name };
   state.groups.push(group);
   await appStore.saveGroup(group);
+  await cloudUpsertGroup(group).catch(err => console.error("Cloud sync error.", err));
   renderGroups();
   updateGroupDatalist();
 }
