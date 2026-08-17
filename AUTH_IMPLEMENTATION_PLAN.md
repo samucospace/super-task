@@ -1,5 +1,23 @@
 # Super Task Auth Implementation Plan
 
+## Status (Current)
+
+Auth shell, session bootstrap, and cloud read/write sync are implemented and tested. Completed:
+
+- Supabase magic-link auth (`auth.js`, `auth-config.js`), including callback handling for `code`, `token_hash`, and hash-token flows, with URL cleanup.
+- Session restore on load; signed-out users keep full local app functionality (local-testing mode).
+- Cloud-as-source-of-truth read sync: sign-in / app load / manual "Refresh from cloud" button pulls tasks/groups for the signed-in user and hydrates local state.
+- Cloud write sync: every task/group create/update/delete pushes to Supabase (`tasks`/`groups` tables), scoped by `user_id`, using soft deletes (`deleted_at`). Writes are awaited so a reload can't race ahead of an in-flight write.
+- Offline/signed-out durability: a persistent local queue (`sync-queue.js`) captures edits made while offline or signed out, and flushes automatically on reconnect, on a timer, and before every cloud pull. Header pill + per-row markers show pending-sync state.
+- Multi-device model: cloud is always pulled fresh on sign-in/reload (no "trust this device" shortcut), since laptop + phone concurrent use is the primary use case.
+
+Not yet implemented (see `IMPLEMENTATION_ROADMAP.md` for sequencing):
+
+- Realtime/live push between already-open tabs or devices (currently requires a reload or manual refresh to see another device's changes).
+- Field-level or timestamp-aware conflict resolution (currently last-write-wins per record).
+- One-time explicit local-to-cloud migration action (existing local data is currently just included in the normal write-sync path, not a guided one-time import).
+- Android/Capacitor packaging and hosted deployment.
+
 ## Goal
 
 Add secure user authentication to Super Task as the first step toward a cloud-synced web and Android app.
@@ -298,20 +316,18 @@ That gives you a real authenticated application shell before touching remote tas
 
 Auth planning becomes auth implementation complete when:
 
-1. User can request a magic link
-2. User can open the link and get signed in
-3. Session restores on refresh
-4. User can sign out cleanly
-5. UI clearly reflects signed-in vs signed-out state
-6. No remote data is exposed without auth
+1. User can request a magic link — done
+2. User can open the link and get signed in — done
+3. Session restores on refresh — done
+4. User can sign out cleanly — done
+5. UI clearly reflects signed-in vs signed-out state — done
+6. No remote data is exposed without auth — done (RLS scoped by `user_id`)
 
 ## Suggested Next Build Task
 
-Implement the auth shell only:
+Auth + read/write cloud sync + offline queue are implemented (see Status section above). Recommended next slices, in order:
 
-1. add `auth.js`
-2. add a minimal signed-out UI in `index.html`
-3. add auth styles in `styles.css`
-4. wire signed-in and signed-out states in `app.js`
-
-That should be the first coding slice of Milestone 2.
+1. Realtime sync between open tabs/devices (Supabase Realtime subscription), so a second device's edits appear without a manual refresh.
+2. Timestamp-aware conflict handling per record (skip overwriting a row if the incoming version is older than what's already there), instead of blanket last-write-wins.
+3. A guided one-time "migrate local data into this account" action for first-time sign-in, separate from the ongoing write-sync path.
+4. Hosted deployment + Android/Capacitor packaging per `IMPLEMENTATION_ROADMAP.md`.

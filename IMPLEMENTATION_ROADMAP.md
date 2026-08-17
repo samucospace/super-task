@@ -36,14 +36,18 @@ The app already has:
 - List/table mode and card mode
 - Group modal editing workflow
 - Export/import backup flow
+- Supabase email magic-link auth with session bootstrap and sign-out (`auth.js`)
+- Cloud-as-source-of-truth read sync (pull on sign-in/reload/manual refresh) and cloud write sync (push on every task/group mutation), scoped by `user_id` with RLS (see `AUTH_IMPLEMENTATION_PLAN.md` Status section)
+- A persistent offline/pending-sync queue (`sync-queue.js`) with automatic retry, so edits made offline or signed-out are not lost
 
 The app does not yet have:
 
-- User accounts
-- Cloud sync
-- Hosted backend
+- Realtime/live sync push between already-open tabs or devices
+- Timestamp-aware conflict resolution (currently last-write-wins per record)
+- A guided one-time local-to-cloud migration flow (existing local data currently syncs via the normal write path, not a dedicated import step)
+- Hosted production deployment
 - Android packaging
-- Secure multi-device session handling
+- Full production security hardening pass (Phase 9)
 
 ## MVP Definition
 
@@ -359,44 +363,39 @@ The app is ready for actual usage beyond local-only personal testing.
 
 ## Recommended Milestone Order
 
-### Milestone 1
+### Milestone 1 — Done
 
-Refactor the current app into a storage-aware structure without changing behavior.
+Refactor the current app into a storage-aware structure without changing behavior. (`core.js`, `dom.js`, `bootstrap.js`, `storage.js`, `repositories.js` now exist as separate modules.)
 
-### Milestone 2
+### Milestone 2 — Done
 
-Create the Supabase schema and wire up authentication.
+Create the Supabase schema and wire up authentication. (`auth.js`, `auth-config.js`, `SUPABASE_SETUP.md` schema/RLS.)
 
-### Milestone 3
+### Milestone 3 — Done (basic model)
 
-Add local-plus-remote sync for tasks and groups.
+Add local-plus-remote sync for tasks and groups, including an offline/pending-sync queue with retry (`sync-queue.js`). Remaining refinement: realtime push and timestamp-aware conflict resolution (see `AUTH_IMPLEMENTATION_PLAN.md` Status section).
 
-### Milestone 4
+### Milestone 4 — Not started
 
-Add local-data migration into the authenticated account.
+Add a guided, one-time local-data migration flow into the authenticated account (distinct from ongoing write-sync).
 
-### Milestone 5
+### Milestone 5 — Not started
 
 Deploy the hosted web version.
 
-### Milestone 6
+### Milestone 6 — Not started
 
 Add Capacitor and build the Android MVP.
 
-### Milestone 7
+### Milestone 7 — Not started
 
 Harden security, test thoroughly, and prepare release.
 
 ## Recommended First Coding Step
 
-Start with the storage abstraction refactor.
+Milestones 1-3 (storage abstraction, auth, and basic hybrid sync with an offline queue) are complete — see `AUTH_IMPLEMENTATION_PLAN.md` for the detailed status.
 
-That is the highest-leverage first move because it reduces the risk of every later phase:
-
-- auth integration becomes cleaner
-- sync logic gets a clean insertion point
-- Android packaging becomes mostly a platform step, not a rewrite
-- local migration becomes explicit instead of tangled inside the UI
+The next highest-leverage step is Milestone 3's remaining refinement: add timestamp-aware conflict handling per record (skip overwriting a row if the incoming version is older) before relying on the app across multiple concurrently-open devices for real work. After that, Milestone 4 (guided local-to-cloud migration) and Milestone 5 (hosted deployment) are the next natural steps toward the Android milestone.
 
 ## Suggested Repo Evolution
 

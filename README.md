@@ -1,6 +1,6 @@
 # Super Task
 
-Super Task is a local-first task board that runs directly in the browser from static files. There is no build step, no package install, and no local server required.
+Super Task is a task board that runs directly in the browser from static files, with optional Supabase-backed cloud sync. There is no build step and no package install; it runs standalone locally, or with cloud sync once Supabase is configured.
 
 ## Highlights
 
@@ -15,6 +15,9 @@ Super Task is a local-first task board that runs directly in the browser from st
 - Persist data with IndexedDB
 - Automatic localStorage fallback when IndexedDB is unavailable
 - Offline support with a service worker and installable PWA manifest
+- Optional Supabase email magic-link sign-in
+- Optional cloud sync of tasks/groups, scoped per signed-in user
+- Offline-safe cloud sync: edits made offline or signed-out are queued locally and pushed automatically once signed in and online
 
 ## Open The App
 
@@ -22,6 +25,8 @@ Use either option:
 
 1. Double-click `index.html`
 2. Double-click `open-super-task.cmd`
+
+The app works fully local-only with no Supabase configuration. Cloud sync is opt-in (see below).
 
 ## How To Use
 
@@ -32,6 +37,19 @@ Use either option:
 5. Use column headers to sort and cycle back to manual ordering.
 6. Open Groups to manage saved groups.
 7. Use Export backup and Import backup to move data between devices.
+8. If cloud sync is configured, sign in with a magic link to sync tasks/groups across devices.
+
+## Cloud Sync (Optional)
+
+See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for full setup steps. In short:
+
+- Copy `auth-config.example.js` to `auth-config.js` and add your Supabase project URL + anon key.
+- Sign in with the magic-link form in the app header.
+- While signed in, the cloud copy (Supabase `tasks`/`groups` tables) is treated as the source of truth: every app load / sign-in pulls the latest cloud data, and every local task/group edit is pushed to the cloud immediately.
+- If offline or signed out, edits are saved locally and queued; a "N changes pending sync" indicator shows in the header, and affected rows get a small amber marker. Queued changes push automatically once you're back online and signed in (also retried on a timer and on browser reconnect), or you can use "Refresh from cloud" / re-visit the app to trigger a push+pull.
+- Import backup and Export backup remain available at all times (including signed out) for local testing and manual backups.
+
+Known limitation: there is no realtime push between open tabs/devices yet, and conflicting near-simultaneous edits on two devices use last-write-wins (no field-level merge).
 
 ## Data And Storage
 
@@ -41,6 +59,8 @@ Use either option:
 	- `groups`
 - Fallback storage key: `super-task-fallback` (localStorage)
 - Column widths key: `super-task-col-widths` (localStorage)
+- Offline/pending cloud sync queue key: `super-task-sync-queue` (localStorage)
+- Cloud copy (when configured): Supabase Postgres `tasks`/`groups` tables, scoped by `user_id`, RLS-protected (see [SUPABASE_SETUP.md](SUPABASE_SETUP.md))
 
 ## Offline And Install
 
@@ -51,7 +71,17 @@ Use either option:
 
 - `index.html`: UI structure and service worker registration
 - `styles.css`: visual styling and layout
-- `app.js`: app state, interactions, sorting, persistence, backup/restore
+- `core.js`: shared constants and initial state shape
+- `dom.js`: centralized DOM element lookups
+- `bootstrap.js`: preference restore and event listener wiring
+- `auth-config.js` / `auth-config.example.js`: Supabase project URL + anon key (not committed with real secrets)
+- `auth.js`: Supabase client init, magic-link sign-in, session/callback handling, sign-out
+- `storage.js`: IndexedDB/localStorage persistence layer
+- `repositories.js`: task/group mutation methods; calls local persistence + cloud sync
+- `sync-queue.js`: persistent offline/pending cloud-sync queue with retry
+- `app.js`: app state, rendering, interactions, cloud bootstrap/sync orchestration, backup/restore
 - `manifest.json`: PWA metadata and icons
 - `service-worker.js`: offline cache and fetch strategy
 - `open-super-task.cmd`: quick launcher for Windows
+- `SUPABASE_SETUP.md`: step-by-step Supabase project/schema setup
+- `AUTH_IMPLEMENTATION_PLAN.md` / `IMPLEMENTATION_ROADMAP.md`: auth/sync design plan and status
