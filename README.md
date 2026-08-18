@@ -104,8 +104,9 @@ The web app is packaged for Android via [Capacitor](https://capacitorjs.com), wi
 Prerequisites to build/run on Android (not needed for the web app itself):
 
 - Node.js + npm (already used for the Capacitor CLI)
-- A JDK (17+ recommended)
+- A JDK (17 or 21; NOT the JDK 25 bundled with newer Android Studio installs — Gradle 8.11/AGP 8.7 here don't support it yet and fail with "Unsupported class file major version 69"). Microsoft Build of OpenJDK 21 (`winget install Microsoft.OpenJDK.21`) is known to work.
 - Android Studio + Android SDK
+- `JAVA_HOME` pointed at the JDK 17/21 install, and `ANDROID_HOME` pointed at the Android SDK (e.g. `%LOCALAPPDATA%\Android\Sdk`)
 
 Workflow once those are installed:
 
@@ -115,4 +116,4 @@ npm run cap:sync      # rebuilds www/ from source files and syncs the android/ p
 npm run android:open  # opens the project in Android Studio
 ```
 
-Run `npm run cap:sync` again any time the web source files change, before opening/building in Android Studio.
+Run `npm run cap:sync` again any time the web source files change, before opening/building in Android Studio. A command-line `.\android\gradlew.bat assembleDebug` has been verified to succeed with this setup.

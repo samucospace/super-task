@@ -14,11 +14,11 @@ Auth shell, session bootstrap, and cloud read/write sync are implemented and tes
 - Timestamp-aware conflict handling: every task/group carries an `updatedAt` timestamp set on each local push. Cloud pulls merge per-record by comparing `updatedAt` instead of blindly overwriting local state; whichever side is newer wins, and any local row that beat the incoming cloud version is re-pushed to reconcile.
 - Local-to-cloud migration: importing a JSON backup (existing Import Backup feature) now also pushes the imported tasks/groups to Supabase when signed in (or queues them via `sync-queue.js` if signed out/offline), so restoring a backup on a fresh sign-in actually migrates that data into the cloud account instead of being silently dropped or overwritten by the next pull.
 - Hosted deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Pages, deployed from `main`; no build step). Add this URL as a Supabase Auth Redirect URL (see `SUPABASE_SETUP.md`).
-- Android/Capacitor scaffolding: `package.json`, `capacitor.config.json` (appId `com.neworchard.supertask`), `scripts/build-www.js`, and the generated `android/` native project are in place. Building/running requires Android Studio + a JDK, which are not yet installed on this dev machine (see README's Android section).
+- Android/Capacitor scaffolding: `package.json`, `capacitor.config.json` (appId `com.neworchard.supertask`), `scripts/build-www.js`, and the generated `android/` native project are in place. A command-line debug build (`gradlew assembleDebug`) has been verified to succeed using Android Studio's SDK plus Microsoft Build of OpenJDK 21 as `JAVA_HOME` (the JDK 25 bundled with the Android Studio install is too new for this project's Gradle/AGP versions).
 
 Not yet implemented (see `IMPLEMENTATION_ROADMAP.md` for sequencing):
 
-- Installing Android Studio/JDK and doing a first real device/emulator build, icon/splash branding, and Play Store release prep.
+- Installing/using the app on a real device or emulator, icon/splash branding, and Play Store release prep.
 
 ## Goal
 

@@ -303,17 +303,18 @@ Reuse the web app as a branded Android app with minimal duplication.
 
 Scaffolding done: `package.json` + Capacitor devDependencies, `capacitor.config.json` (appId `com.neworchard.supertask`, appName "Super Task", `webDir: "www"`), `scripts/build-www.js` (copies just the runtime web files into `www/` for packaging), and the generated `android/` native project (tracked in git per Capacitor convention).
 
-Still to do (blocked on installing Android Studio + a JDK on a dev machine):
+Android Studio + SDK are installed, and a command-line debug build (`gradlew assembleDebug`) succeeds using Microsoft Build of OpenJDK 21 as `JAVA_HOME` (the newer JDK 25 bundled with Android Studio itself is too new for this project's Gradle 8.11/AGP 8.7 and fails with "Unsupported class file major version 69").
 
-1. Install Android Studio, Android SDK, and a JDK (17+).
-2. Run `npm run cap:sync` then `npm run android:open` to open the project in Android Studio.
-3. Set custom icons/splash screen (currently using Capacitor defaults).
-4. Test:
+Still to do:
+
+1. Open the project in Android Studio (`npm run android:open`) and set its Gradle JDK to 17/21 if it also defaults to the bundled JDK 25.
+2. Set custom icons/splash screen (currently using Capacitor defaults).
+3. Test on a real device or emulator:
    - login/session persistence
    - offline behavior
    - sync after reconnect
    - modal/table/card interactions
-5. Generate APK/AAB for testing and release.
+4. Generate a signed APK/AAB for release.
 
 ### Deliverable
 
@@ -386,7 +387,7 @@ Deploy the hosted web version: https://super-task.samfraser-au.workers.dev (Clou
 
 ### Milestone 6 — In progress
 
-Add Capacitor and build the Android MVP. Project scaffolding (`package.json`, `capacitor.config.json`, `scripts/build-www.js`, generated `android/` project) is done. Remaining: install Android Studio + a JDK, then do a first real build/test pass, custom icons, and release prep.
+Add Capacitor and build the Android MVP. Project scaffolding is done and a command-line debug build succeeds (`gradlew assembleDebug`, using JDK 21). Remaining: open/verify in Android Studio, test on a real device/emulator, custom icons, and release prep.
 
 ### Milestone 7 — Not started
 
