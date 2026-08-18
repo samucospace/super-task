@@ -41,7 +41,7 @@ The app already has:
 - A persistent offline/pending-sync queue (`sync-queue.js`) with automatic retry, so edits made offline or signed-out are not lost
 - Realtime sync between open tabs/devices via Supabase Realtime `postgres_changes`, and timestamp-aware per-record conflict merging on every cloud pull
 - Local-to-cloud migration via the existing Import Backup flow, which now also pushes imported data to Supabase when signed in
-- Hosted production deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Pages, deployed from `main`)
+- Hosted production deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Workers static assets, auto-deploys from `main`)
 - Android/Capacitor project scaffolding (`package.json`, `capacitor.config.json`, `scripts/build-www.js`, generated `android/` project)
 
 The app does not yet have:
@@ -382,7 +382,7 @@ Local-data migration into the authenticated account, via the existing Import Bac
 
 ### Milestone 5 — Done
 
-Deploy the hosted web version: https://super-task.samfraser-au.workers.dev (Cloudflare Pages, auto-deploys from `main`). Requires this URL to also be added as a Supabase Auth Redirect URL (see `SUPABASE_SETUP.md`).
+Deploy the hosted web version: https://super-task.samfraser-au.workers.dev (Cloudflare Workers static assets, auto-deploys from `main` via Workers Builds; build command `npm run www:build`, assets directory `www` per `wrangler.jsonc`). Requires this URL to also be added as a Supabase Auth Redirect URL (see `SUPABASE_SETUP.md`).
 
 ### Milestone 6 — In progress
 

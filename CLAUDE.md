@@ -18,7 +18,7 @@ Super Task is a task board app built from static files, local-first by default w
 - HTML: `index.html`
 - CSS: `styles.css`
 - JS modules: `core.js`, `dom.js`, `bootstrap.js`, `storage.js`, `repositories.js`, `auth.js`, `sync-queue.js`, `app.js`
-- Auth config: `auth-config.js` (real Supabase URL + publishable/anon key, intentionally committed — that key is public-safe and Cloudflare Pages deploys straight from this repo with no build step) / `auth-config.example.js` (template)
+- Auth config: `auth-config.js` (real Supabase URL + publishable/anon key, intentionally committed — that key is public-safe and Cloudflare deploys `www/` straight from this repo via `npm run www:build`) / `auth-config.example.js` (template)
 - PWA assets: `manifest.json`, `service-worker.js`
 
 ## Android (Capacitor)
