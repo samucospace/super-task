@@ -116,4 +116,4 @@ npm run cap:sync      # rebuilds www/ from source files and syncs the android/ p
 npm run android:open  # opens the project in Android Studio
 ```
 
-Run `npm run cap:sync` again any time the web source files change, before opening/building in Android Studio. A command-line `.\android\gradlew.bat assembleDebug` has been verified to succeed with this setup.
+Run `npm run cap:sync` again any time the web source files change, before opening/building in Android Studio. A command-line `.\android\gradlew.bat assembleDebug` has been verified to succeed with this setup, and the app has launched successfully on an Android Studio virtual device (full feature testing on-device is still pending).
