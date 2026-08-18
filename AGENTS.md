@@ -48,7 +48,9 @@ Task shape (logical):
 - Every task/group mutation pushes to Supabase immediately (soft delete via `deleted_at`), scoped by `user_id`.
 - Offline or signed-out edits are queued locally (`sync-queue.js`) and auto-flushed on reconnect, on a timer, and before any cloud pull.
 - Header shows a "N changes pending sync" pill and rows get an amber marker when unsynced.
-- No realtime cross-device push yet; conflicts use last-write-wins via client-set `updated_at`.
+- Realtime cross-tab/device push via Supabase Realtime `postgres_changes` subscriptions (requires Realtime enabled on `tasks`/`groups` tables).
+- Timestamp-aware per-record conflict merging on every cloud pull (an `updatedAt`-newer local row survives a pull instead of being blanket-overwritten); conflicts are still whole-row (not field-level).
+- Import Backup pushes imported data to cloud too when signed in, so it serves as the local-to-cloud migration path.
 
 ## Current UI Modes
 

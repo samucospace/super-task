@@ -39,12 +39,11 @@ The app already has:
 - Supabase email magic-link auth with session bootstrap and sign-out (`auth.js`)
 - Cloud-as-source-of-truth read sync (pull on sign-in/reload/manual refresh) and cloud write sync (push on every task/group mutation), scoped by `user_id` with RLS (see `AUTH_IMPLEMENTATION_PLAN.md` Status section)
 - A persistent offline/pending-sync queue (`sync-queue.js`) with automatic retry, so edits made offline or signed-out are not lost
+- Realtime sync between open tabs/devices via Supabase Realtime `postgres_changes`, and timestamp-aware per-record conflict merging on every cloud pull
+- Local-to-cloud migration via the existing Import Backup flow, which now also pushes imported data to Supabase when signed in
 
 The app does not yet have:
 
-- Realtime/live sync push between already-open tabs or devices
-- Timestamp-aware conflict resolution (currently last-write-wins per record)
-- A guided one-time local-to-cloud migration flow (existing local data currently syncs via the normal write path, not a dedicated import step)
 - Hosted production deployment
 - Android packaging
 - Full production security hardening pass (Phase 9)
@@ -255,18 +254,19 @@ Later, if needed, upgrade to a richer operation-log model.
 
 The same account can use the app across devices with offline support and eventual sync.
 
-## Phase 6: Migrate Existing Local Data
+## Phase 6: Migrate Existing Local Data — Done
 
 ### Objective
 
 Protect the current local-only user data during the transition.
 
-### Tasks
+### Implemented Approach
 
-1. Detect existing local IndexedDB/localStorage data.
-2. After first login, offer a one-time import into the cloud account.
-3. Mark the migration as complete so it is not repeated.
-4. Keep export/import backup available as a recovery mechanism.
+Instead of a separate automatic detect-and-prompt flow, this was implemented via
+the existing Import Backup feature: importing a JSON backup now also pushes
+the imported tasks/groups to Supabase when signed in (or queues them via
+`sync-queue.js` if offline/signed out). Anyone with local-only data can export
+a backup, sign in, and re-import it to migrate into the cloud account.
 
 ### Deliverable
 
@@ -371,13 +371,13 @@ Refactor the current app into a storage-aware structure without changing behavio
 
 Create the Supabase schema and wire up authentication. (`auth.js`, `auth-config.js`, `SUPABASE_SETUP.md` schema/RLS.)
 
-### Milestone 3 — Done (basic model)
+### Milestone 3 — Done
 
-Add local-plus-remote sync for tasks and groups, including an offline/pending-sync queue with retry (`sync-queue.js`). Remaining refinement: realtime push and timestamp-aware conflict resolution (see `AUTH_IMPLEMENTATION_PLAN.md` Status section).
+Add local-plus-remote sync for tasks and groups, including an offline/pending-sync queue with retry (`sync-queue.js`), realtime cross-tab/device sync, and timestamp-aware per-record conflict merging (see `AUTH_IMPLEMENTATION_PLAN.md` Status section).
 
-### Milestone 4 — Not started
+### Milestone 4 — Done
 
-Add a guided, one-time local-data migration flow into the authenticated account (distinct from ongoing write-sync).
+Local-data migration into the authenticated account, via the existing Import Backup flow (now also pushes to cloud when signed in).
 
 ### Milestone 5 — Not started
 
@@ -393,9 +393,9 @@ Harden security, test thoroughly, and prepare release.
 
 ## Recommended First Coding Step
 
-Milestones 1-3 (storage abstraction, auth, and basic hybrid sync with an offline queue) are complete — see `AUTH_IMPLEMENTATION_PLAN.md` for the detailed status.
+Milestones 1-4 (storage abstraction, auth, hybrid sync with realtime + conflict handling, and local-to-cloud migration via backup import) are complete — see `AUTH_IMPLEMENTATION_PLAN.md` for the detailed status.
 
-The next highest-leverage step is Milestone 3's remaining refinement: add timestamp-aware conflict handling per record (skip overwriting a row if the incoming version is older) before relying on the app across multiple concurrently-open devices for real work. After that, Milestone 4 (guided local-to-cloud migration) and Milestone 5 (hosted deployment) are the next natural steps toward the Android milestone.
+The next highest-leverage step is Milestone 5: hosted deployment, followed by Milestone 6 (Capacitor/Android packaging).
 
 ## Suggested Repo Evolution
 

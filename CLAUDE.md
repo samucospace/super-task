@@ -43,7 +43,10 @@ Super Task is a task board app built from static files, local-first by default w
 - Every task/group create/update/delete is pushed to Supabase (`tasks`/`groups` tables) immediately after the local write, scoped by `user_id`, using soft deletes (`deleted_at`).
 - Offline/signed-out edits are captured by a persistent local queue (`sync-queue.js`, localStorage key `super-task-sync-queue`) and flushed automatically: on reconnect (`online` event), on a 30s timer, and before every cloud pull (so local edits push before being possibly overwritten).
 - Pending-sync UI: header pill ("N changes pending sync") plus a small amber marker on affected task rows.
-- Known limitation: no realtime cross-tab/cross-device push yet; near-simultaneous edits on two devices use last-write-wins with an explicit `updated_at` set client-side (do not rely solely on a DB trigger for `updated_at`).
+- Realtime sync: while signed in, the app subscribes to Supabase Realtime `postgres_changes` on `tasks`/`groups` (filtered by `user_id`) and does a debounced (~500ms) silent re-pull when another tab/device changes data. Requires Realtime enabled on both tables (see `SUPABASE_SETUP.md`).
+- Conflict handling: each task/group carries an `updatedAt` set on every push. Cloud pulls merge per-record by comparing `updatedAt` (newer side wins) instead of blanket-overwriting local state; any local row that wins gets re-pushed to reconcile. Still whole-row, not field-level.
+- Local-to-cloud migration: Import Backup (`handleImportFile` in `app.js`) also pushes imported tasks/groups to Supabase when signed in (or queues them if offline/signed out), so restoring a backup after sign-in migrates that data into the cloud account.
+- Known limitation: no field-level conflict merging (still whole-row last-write-wins by timestamp).
 
 ## Storage Model
 

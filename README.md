@@ -18,6 +18,8 @@ Super Task is a task board that runs directly in the browser from static files, 
 - Optional Supabase email magic-link sign-in
 - Optional cloud sync of tasks/groups, scoped per signed-in user
 - Offline-safe cloud sync: edits made offline or signed-out are queued locally and pushed automatically once signed in and online
+- Realtime sync between open tabs/devices for the same account (no manual refresh needed)
+- Timestamp-aware conflict handling so a stale cloud pull can't clobber a more recent local edit
 
 ## Open The App
 
@@ -47,9 +49,11 @@ See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for full setup steps. In short:
 - Sign in with the magic-link form in the app header.
 - While signed in, the cloud copy (Supabase `tasks`/`groups` tables) is treated as the source of truth: every app load / sign-in pulls the latest cloud data, and every local task/group edit is pushed to the cloud immediately.
 - If offline or signed out, edits are saved locally and queued; a "N changes pending sync" indicator shows in the header, and affected rows get a small amber marker. Queued changes push automatically once you're back online and signed in (also retried on a timer and on browser reconnect), or you can use "Refresh from cloud" / re-visit the app to trigger a push+pull.
-- Import backup and Export backup remain available at all times (including signed out) for local testing and manual backups.
+- While signed in, other open tabs/devices on the same account are notified of changes via Supabase Realtime and refresh automatically (requires Realtime enabled on the `tasks`/`groups` tables; see [SUPABASE_SETUP.md](SUPABASE_SETUP.md)).
+- Each task/group tracks an `updatedAt` timestamp; cloud pulls merge per-record instead of blanket-overwriting, so a more recently edited local row survives a pull from slightly older cloud data.
+- Import backup and Export backup remain available at all times (including signed out) for local testing and manual backups. Importing a backup while signed in also pushes the imported data to your cloud account, so it survives future syncs.
 
-Known limitation: there is no realtime push between open tabs/devices yet, and conflicting near-simultaneous edits on two devices use last-write-wins (no field-level merge).
+Known limitation: conflict resolution is per-record (whole row wins by timestamp), not field-level merging.
 
 ## Data And Storage
 
