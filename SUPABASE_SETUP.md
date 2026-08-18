@@ -239,6 +239,21 @@ using (user_id = auth.uid());
 
 ---
 
+## 4b. Enable Realtime
+
+The app subscribes to Postgres changes on `tasks` and `groups` so open
+tabs/devices stay in sync without a manual refresh. Enable Realtime on both
+tables:
+
+1. In the Supabase dashboard, go to Database -> Replication (or Table Editor ->
+   select table -> Realtime toggle).
+2. Enable Realtime for the `tasks` table and the `groups` table.
+
+RLS policies above already scope these changes to `user_id = auth.uid()`, so
+each user only receives events for their own rows.
+
+---
+
 ## 5. Configure This Repo
 
 1. Open auth config example file.

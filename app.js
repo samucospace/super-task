@@ -43,6 +43,9 @@ let dragHandleActive = false;
 let resizeState = null;
 let cloudBootstrapUserId = null;
 let cloudBootstrapInFlight = false;
+let realtimeChannel = null;
+let realtimeUserId = null;
+let realtimePullTimer = null;
 
 // --- DOM refs ---
 const {
@@ -239,9 +242,12 @@ async function handleAuthTransition(previousUserId) {
 
   if (!isSignedIn) {
     cloudBootstrapUserId = null;
+    unsubscribeRealtime();
     restoreLocalStorageStatus();
     return;
   }
+
+  subscribeRealtime(currentUserId);
 
   if (!currentUserId || cloudBootstrapInFlight || cloudBootstrapUserId === currentUserId) {
     return;
@@ -251,6 +257,49 @@ async function handleAuthTransition(previousUserId) {
   // phone), cloud is the shared source of truth. Writes are awaited before
   // resolving, so a fresh pull reflects this device's own recent edits too.
   await loadCloudDataForUser(currentUserId, previousUserId);
+}
+
+// ── REALTIME SYNC ─────────────────────────────────────────────────────────────
+// Listens for changes made by other tabs/devices for the same user and pulls
+// fresh cloud data (debounced) so open sessions stay in sync without a manual
+// refresh. Requires Realtime to be enabled on the `tasks`/`groups` tables.
+
+function subscribeRealtime(userId) {
+  if (!userId || realtimeUserId === userId) return;
+  const client = authService.getClient();
+  if (!client) return;
+
+  unsubscribeRealtime();
+
+  realtimeChannel = client
+    .channel(`super-task-sync-${userId}`)
+    .on("postgres_changes", { event: "*", schema: "public", table: "tasks", filter: `user_id=eq.${userId}` }, scheduleRealtimePull)
+    .on("postgres_changes", { event: "*", schema: "public", table: "groups", filter: `user_id=eq.${userId}` }, scheduleRealtimePull)
+    .subscribe();
+  realtimeUserId = userId;
+}
+
+function unsubscribeRealtime() {
+  if (realtimePullTimer) {
+    clearTimeout(realtimePullTimer);
+    realtimePullTimer = null;
+  }
+  if (realtimeChannel) {
+    const client = authService.getClient();
+    client?.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+  }
+  realtimeUserId = null;
+}
+
+function scheduleRealtimePull() {
+  if (realtimePullTimer) return;
+  realtimePullTimer = setTimeout(() => {
+    realtimePullTimer = null;
+    const userId = state.auth.user?.id || null;
+    if (!userId || state.auth.status !== "signed-in") return;
+    void loadCloudDataForUser(userId, userId, { silent: true });
+  }, 500);
 }
 
 function renderAuthState() {
@@ -288,12 +337,13 @@ function setAuthMessage(message, isError) {
   authMessage.classList.toggle("is-error", !!isError);
 }
 
-async function loadCloudDataForUser(userId, previousUserId) {
+async function loadCloudDataForUser(userId, previousUserId, options = {}) {
+  const { silent = false } = options;
   const client = authService.getClient();
   if (!client || !userId) return;
 
   cloudBootstrapInFlight = true;
-  setStorageStatus("Loading cloud data...", false);
+  if (!silent) setStorageStatus("Loading cloud data...", false);
 
   // Push any pending offline edits before pulling, so this device's own
   // recent changes aren't lost by the pull that treats cloud as truth.
@@ -331,17 +381,19 @@ async function loadCloudDataForUser(userId, previousUserId) {
       renderGroups();
       updateGroupDatalist();
       renderTasks();
-      setAuthMessage("Signed in. Loaded cloud data for this account.", false);
-    } else if (!previousUserId || previousUserId !== userId) {
+      if (!silent) setAuthMessage("Signed in. Loaded cloud data for this account.", false);
+    } else if (!silent && (!previousUserId || previousUserId !== userId)) {
       setAuthMessage("Signed in. No cloud data yet, continuing with local data.", false);
     }
 
     cloudBootstrapUserId = userId;
-    setStorageStatus("Cloud account connected", false);
+    if (!silent) setStorageStatus("Cloud account connected", false);
   } catch (err) {
     console.error("Cloud bootstrap failed.", err);
-    setAuthMessage(`Signed in, but cloud load failed: ${err.message || "Unknown error"}. Using local data.`, true);
-    setStorageStatus("Cloud load failed, using local data", true);
+    if (!silent) {
+      setAuthMessage(`Signed in, but cloud load failed: ${err.message || "Unknown error"}. Using local data.`, true);
+      setStorageStatus("Cloud load failed, using local data", true);
+    }
   } finally {
     cloudBootstrapInFlight = false;
   }
