@@ -45,11 +45,11 @@ Important:
 1. Open Authentication.
 2. Open URL Configuration.
 3. Set Site URL:
-   - Your hosted web URL later
-   - For local testing now, use your local served URL (for example http://localhost:5500 if using Live Server)
+   - Your hosted web URL: https://super-task.samfraser-au.workers.dev
+   - For local testing now, use your local served URL (for example http://127.0.0.1:5500)
 4. Add Redirect URLs:
-   - local URL(s) you test with
-   - hosted URL(s) you deploy to
+   - http://127.0.0.1:5500 (local dev)
+   - https://super-task.samfraser-au.workers.dev (hosted)
 5. Open Providers (or Sign In Methods).
 6. Enable Email provider.
 7. Ensure Magic Link / OTP is enabled.

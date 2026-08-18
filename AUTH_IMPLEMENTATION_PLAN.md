@@ -13,10 +13,11 @@ Auth shell, session bootstrap, and cloud read/write sync are implemented and tes
 - Realtime sync: while signed in, the app subscribes to Supabase Realtime `postgres_changes` on `tasks`/`groups` (filtered by `user_id`) and pulls fresh data (debounced ~500ms) when another tab/device changes data, so open sessions stay in sync without a manual refresh. Requires Realtime enabled on both tables (see `SUPABASE_SETUP.md`).
 - Timestamp-aware conflict handling: every task/group carries an `updatedAt` timestamp set on each local push. Cloud pulls merge per-record by comparing `updatedAt` instead of blindly overwriting local state; whichever side is newer wins, and any local row that beat the incoming cloud version is re-pushed to reconcile.
 - Local-to-cloud migration: importing a JSON backup (existing Import Backup feature) now also pushes the imported tasks/groups to Supabase when signed in (or queues them via `sync-queue.js` if signed out/offline), so restoring a backup on a fresh sign-in actually migrates that data into the cloud account instead of being silently dropped or overwritten by the next pull.
+- Hosted deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Pages, deployed from `main`; no build step). Add this URL as a Supabase Auth Redirect URL (see `SUPABASE_SETUP.md`).
 
 Not yet implemented (see `IMPLEMENTATION_ROADMAP.md` for sequencing):
 
-- Android/Capacitor packaging and hosted deployment.
+- Android/Capacitor packaging.
 
 ## Goal
 

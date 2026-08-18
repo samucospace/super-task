@@ -41,10 +41,10 @@ The app already has:
 - A persistent offline/pending-sync queue (`sync-queue.js`) with automatic retry, so edits made offline or signed-out are not lost
 - Realtime sync between open tabs/devices via Supabase Realtime `postgres_changes`, and timestamp-aware per-record conflict merging on every cloud pull
 - Local-to-cloud migration via the existing Import Backup flow, which now also pushes imported data to Supabase when signed in
+- Hosted production deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Pages, deployed from `main`)
 
 The app does not yet have:
 
-- Hosted production deployment
 - Android packaging
 - Full production security hardening pass (Phase 9)
 
@@ -379,9 +379,9 @@ Add local-plus-remote sync for tasks and groups, including an offline/pending-sy
 
 Local-data migration into the authenticated account, via the existing Import Backup flow (now also pushes to cloud when signed in).
 
-### Milestone 5 — Not started
+### Milestone 5 — Done
 
-Deploy the hosted web version.
+Deploy the hosted web version: https://super-task.samfraser-au.workers.dev (Cloudflare Pages, auto-deploys from `main`). Requires this URL to also be added as a Supabase Auth Redirect URL (see `SUPABASE_SETUP.md`).
 
 ### Milestone 6 — Not started
 
@@ -393,9 +393,9 @@ Harden security, test thoroughly, and prepare release.
 
 ## Recommended First Coding Step
 
-Milestones 1-4 (storage abstraction, auth, hybrid sync with realtime + conflict handling, and local-to-cloud migration via backup import) are complete — see `AUTH_IMPLEMENTATION_PLAN.md` for the detailed status.
+Milestones 1-5 (storage abstraction, auth, hybrid sync with realtime + conflict handling, local-to-cloud migration via backup import, and hosted deployment) are complete — see `AUTH_IMPLEMENTATION_PLAN.md` for the detailed status.
 
-The next highest-leverage step is Milestone 5: hosted deployment, followed by Milestone 6 (Capacitor/Android packaging).
+The next highest-leverage step is Milestone 6: Capacitor/Android packaging.
 
 ## Suggested Repo Evolution
 
