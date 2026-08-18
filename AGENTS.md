@@ -7,8 +7,8 @@ This guide helps coding agents work quickly and safely in Super Task.
 ## Project Snapshot
 
 - Local-first static web app with optional Supabase-backed cloud sync.
-- No build step, no package manager, no required backend (Supabase is opt-in).
-- Run by opening `index.html` directly (or `open-super-task.cmd`).
+- The web app itself has no build step and no package manager dependency; open `index.html` directly (or `open-super-task.cmd`) and it just works.
+- `package.json`/`node_modules`/`android/` exist only for optional Android packaging via Capacitor (see "Android (Capacitor)" below) — they are not required to run or edit the web app.
 - Core files:
   - `index.html` for structure
   - `styles.css` for styling/layout
@@ -18,6 +18,13 @@ This guide helps coding agents work quickly and safely in Super Task.
   - `sync-queue.js` for the offline/pending cloud-sync queue
   - `app.js` for rendering, interactions, and cloud sync orchestration
   - `manifest.json` and `service-worker.js` for PWA/offline
+
+## Android (Capacitor)
+
+- `capacitor.config.json`: appId `com.neworchard.supertask`, `webDir: "www"`.
+- `scripts/build-www.js`: copies just the runtime web files (not docs/tooling) into `www/` (gitignored, regenerated on demand).
+- `android/`: generated native project, tracked in git.
+- If you edit any runtime web file, remember `www/` and `android/app/src/main/assets/public` are stale copies — run `npm run cap:sync` before building/opening Android Studio. This has no effect on the browser app.
 
 ## Agent Priorities
 

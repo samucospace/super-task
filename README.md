@@ -91,3 +91,28 @@ Known limitation: conflict resolution is per-record (whole row wins by timestamp
 - `open-super-task.cmd`: quick launcher for Windows
 - `SUPABASE_SETUP.md`: step-by-step Supabase project/schema setup
 - `AUTH_IMPLEMENTATION_PLAN.md` / `IMPLEMENTATION_ROADMAP.md`: auth/sync design plan and status
+
+## Android (Capacitor)
+
+The web app is packaged for Android via [Capacitor](https://capacitorjs.com), with no changes to how the static app itself runs.
+
+- `package.json` / `node_modules/`: Capacitor CLI + Android platform tooling (npm-only, no bundler/build step for the web code itself)
+- `capacitor.config.json`: app id (`com.neworchard.supertask`), app name, and `webDir: "www"`
+- `scripts/build-www.js`: copies just the runtime web files (no docs, no tooling) into `www/`, which is the folder Capacitor packages into the Android app
+- `android/`: the generated native Android Studio project (tracked in git per Capacitor convention)
+
+Prerequisites to build/run on Android (not needed for the web app itself):
+
+- Node.js + npm (already used for the Capacitor CLI)
+- A JDK (17+ recommended)
+- Android Studio + Android SDK
+
+Workflow once those are installed:
+
+```
+npm install
+npm run cap:sync      # rebuilds www/ from source files and syncs the android/ project
+npm run android:open  # opens the project in Android Studio
+```
+
+Run `npm run cap:sync` again any time the web source files change, before opening/building in Android Studio.

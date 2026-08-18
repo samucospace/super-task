@@ -8,18 +8,26 @@ This file provides persistent project context for AI-assisted chat sessions in t
 
 Super Task is a task board app built from static files, local-first by default with optional Supabase-backed cloud sync.
 
-- No build step
-- No package manager dependencies
+- The web app itself has no build step and no package manager dependency
 - No backend server required (Supabase is an optional managed backend for auth + sync)
 - Runs by opening `index.html` directly (or `open-super-task.cmd`)
+- `package.json`/`node_modules`/`android/` exist only to package the app for Android via Capacitor; they are unrelated to running/editing the web app itself (see Android section below)
 
 ## Current Stack
 
 - HTML: `index.html`
 - CSS: `styles.css`
 - JS modules: `core.js`, `dom.js`, `bootstrap.js`, `storage.js`, `repositories.js`, `auth.js`, `sync-queue.js`, `app.js`
-- Auth config: `auth-config.js` (real, gitignored-style local secrets) / `auth-config.example.js` (template)
+- Auth config: `auth-config.js` (real Supabase URL + publishable/anon key, intentionally committed — that key is public-safe and Cloudflare Pages deploys straight from this repo with no build step) / `auth-config.example.js` (template)
 - PWA assets: `manifest.json`, `service-worker.js`
+
+## Android (Capacitor)
+
+- `capacitor.config.json`: appId `com.neworchard.supertask`, appName "Super Task", `webDir: "www"`.
+- `scripts/build-www.js`: copies just the runtime web files into `www/` (gitignored, regenerated via `npm run www:build`).
+- `android/`: generated native Android Studio project, tracked in git per Capacitor convention.
+- `npm run cap:sync` rebuilds `www/` and syncs `android/`; `npm run android:open` also opens Android Studio.
+- Building/running on Android requires Android Studio + a JDK installed locally (not yet done as of this scaffolding).
 
 ## Core Product Behaviors
 

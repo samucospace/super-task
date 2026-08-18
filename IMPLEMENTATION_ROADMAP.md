@@ -42,10 +42,11 @@ The app already has:
 - Realtime sync between open tabs/devices via Supabase Realtime `postgres_changes`, and timestamp-aware per-record conflict merging on every cloud pull
 - Local-to-cloud migration via the existing Import Backup flow, which now also pushes imported data to Supabase when signed in
 - Hosted production deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Pages, deployed from `main`)
+- Android/Capacitor project scaffolding (`package.json`, `capacitor.config.json`, `scripts/build-www.js`, generated `android/` project)
 
 The app does not yet have:
 
-- Android packaging
+- Android Studio + JDK installed on the dev machine, so no real device/emulator build has been done yet
 - Full production security hardening pass (Phase 9)
 
 ## MVP Definition
@@ -298,15 +299,15 @@ A production web deployment is available and secure.
 
 Reuse the web app as a branded Android app with minimal duplication.
 
-### Tasks
+### Status
 
-1. Add Capacitor to the project.
-2. Configure:
-   - app name
-   - package ID
-   - icons
-   - splash screen
-3. Build Android project files.
+Scaffolding done: `package.json` + Capacitor devDependencies, `capacitor.config.json` (appId `com.neworchard.supertask`, appName "Super Task", `webDir: "www"`), `scripts/build-www.js` (copies just the runtime web files into `www/` for packaging), and the generated `android/` native project (tracked in git per Capacitor convention).
+
+Still to do (blocked on installing Android Studio + a JDK on a dev machine):
+
+1. Install Android Studio, Android SDK, and a JDK (17+).
+2. Run `npm run cap:sync` then `npm run android:open` to open the project in Android Studio.
+3. Set custom icons/splash screen (currently using Capacitor defaults).
 4. Test:
    - login/session persistence
    - offline behavior
@@ -383,9 +384,9 @@ Local-data migration into the authenticated account, via the existing Import Bac
 
 Deploy the hosted web version: https://super-task.samfraser-au.workers.dev (Cloudflare Pages, auto-deploys from `main`). Requires this URL to also be added as a Supabase Auth Redirect URL (see `SUPABASE_SETUP.md`).
 
-### Milestone 6 — Not started
+### Milestone 6 — In progress
 
-Add Capacitor and build the Android MVP.
+Add Capacitor and build the Android MVP. Project scaffolding (`package.json`, `capacitor.config.json`, `scripts/build-www.js`, generated `android/` project) is done. Remaining: install Android Studio + a JDK, then do a first real build/test pass, custom icons, and release prep.
 
 ### Milestone 7 — Not started
 
@@ -395,7 +396,7 @@ Harden security, test thoroughly, and prepare release.
 
 Milestones 1-5 (storage abstraction, auth, hybrid sync with realtime + conflict handling, local-to-cloud migration via backup import, and hosted deployment) are complete — see `AUTH_IMPLEMENTATION_PLAN.md` for the detailed status.
 
-The next highest-leverage step is Milestone 6: Capacitor/Android packaging.
+Milestone 6 (Capacitor/Android) is scaffolded; the next step is installing Android Studio + a JDK and doing a first real build.
 
 ## Suggested Repo Evolution
 
