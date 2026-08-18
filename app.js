@@ -47,6 +47,20 @@ let realtimeChannel = null;
 let realtimeUserId = null;
 let realtimePullTimer = null;
 
+// Guards against a racing cloud pull (e.g. the delete's own realtime
+// self-notification) resurrecting a task/group that was just deleted
+// locally, before the pull's SELECT reliably reflects the deletion.
+const PENDING_DELETE_TTL_MS = 2 * 60 * 1000;
+const pendingDeletedIds = new Map();
+
+function markPendingDeleted(ids) {
+  const now = Date.now();
+  for (const [id, deletedAt] of pendingDeletedIds) {
+    if (now - deletedAt > PENDING_DELETE_TTL_MS) pendingDeletedIds.delete(id);
+  }
+  ids.forEach(id => pendingDeletedIds.set(id, now));
+}
+
 // --- DOM refs ---
 const {
   form,
@@ -442,18 +456,25 @@ function mapCloudGroups(rows) {
 // Picks, per id, whichever of the local/cloud version has the newer
 // `updatedAt`. Ids only present in cloud are added; ids only present locally
 // are dropped (already-flushed local deletes/creates are reflected in cloud).
+// Cloud rows recently deleted locally are also dropped even if the cloud
+// pull raced ahead of the delete's own soft-delete becoming visible.
 function mergeByTimestamp(localItems, cloudItems) {
   const localById = new Map(localItems.map(item => [item.id, item]));
   const localWins = [];
 
-  const merged = cloudItems.map(cloudItem => {
-    const localItem = localById.get(cloudItem.id);
-    if (localItem && isNewerTimestamp(localItem.updatedAt, cloudItem.updatedAt)) {
-      localWins.push(localItem);
-      return localItem;
-    }
-    return cloudItem;
-  });
+  const merged = cloudItems
+    .filter(cloudItem => {
+      const deletedAt = pendingDeletedIds.get(cloudItem.id);
+      return deletedAt === undefined || isNewerTimestamp(cloudItem.updatedAt, new Date(deletedAt).toISOString());
+    })
+    .map(cloudItem => {
+      const localItem = localById.get(cloudItem.id);
+      if (localItem && isNewerTimestamp(localItem.updatedAt, cloudItem.updatedAt)) {
+        localWins.push(localItem);
+        return localItem;
+      }
+      return cloudItem;
+    });
 
   return { merged, localWins };
 }
@@ -554,6 +575,7 @@ async function cloudUpsertTasks(tasks) {
 
 async function cloudDeleteTasks(taskIds) {
   if (!isCloudSyncEnabled() || !taskIds.length) return;
+  markPendingDeleted(taskIds);
   const ctx = getCloudContext();
 
   if (!ctx) {
@@ -604,6 +626,7 @@ async function cloudUpsertGroup(group) {
 
 async function cloudDeleteGroup(groupId) {
   if (!isCloudSyncEnabled()) return;
+  markPendingDeleted([groupId]);
   const ctx = getCloudContext();
 
   if (!ctx) {
