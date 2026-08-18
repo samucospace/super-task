@@ -19,15 +19,22 @@ window.SuperTaskRepositories = (() => {
     return {
       addTask(task) {
         state.tasks = insertTaskByCurrentSort(task);
+        // insertTaskByCurrentSort can reindex other tasks' `order` (e.g. to
+        // keep completed tasks below the new one), so push all tasks, not
+        // just the new one, or cloud sort_order for the rest goes stale.
         return autoRegisterGroup(task.group).then(() => syncTasks()).then(() => {
-          return runCloud(cloudSync?.upsertTasks([task]));
+          return runCloud(cloudSync?.upsertTasks(state.tasks));
         });
       },
 
       deleteTask(taskId) {
         state.tasks = state.tasks.filter(task => task.id !== taskId);
+        state.tasks.forEach((task, index) => { task.order = index; });
         return syncTasks().then(() => {
-          return runCloud(cloudSync?.deleteTasks([taskId]));
+          return Promise.all([
+            runCloud(cloudSync?.deleteTasks([taskId])),
+            runCloud(cloudSync?.upsertTasks(state.tasks))
+          ]);
         });
       },
 
@@ -36,7 +43,10 @@ window.SuperTaskRepositories = (() => {
         state.tasks = state.tasks.filter(task => !task.completed);
         state.tasks.forEach((task, index) => { task.order = index; });
         return syncTasks().then(() => {
-          return runCloud(cloudSync?.deleteTasks(completedIds));
+          return Promise.all([
+            runCloud(cloudSync?.deleteTasks(completedIds)),
+            runCloud(cloudSync?.upsertTasks(state.tasks))
+          ]);
         });
       },
 
