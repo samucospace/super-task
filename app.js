@@ -355,13 +355,13 @@ async function loadCloudDataForUser(userId, previousUserId, options = {}) {
     const [tasksResult, groupsResult] = await Promise.all([
       client
         .from("tasks")
-        .select("id, title, group_name, due_date, priority, notes, completed, sort_order")
+        .select("id, title, group_name, due_date, priority, notes, completed, sort_order, updated_at")
         .eq("user_id", userId)
         .is("deleted_at", null)
         .order("sort_order", { ascending: true }),
       client
         .from("groups")
-        .select("id, name")
+        .select("id, name, updated_at")
         .eq("user_id", userId)
         .is("deleted_at", null)
         .order("name", { ascending: true })
@@ -375,13 +375,22 @@ async function loadCloudDataForUser(userId, previousUserId, options = {}) {
     const hasCloudData = cloudTasks.length > 0 || cloudGroups.length > 0;
 
     if (hasCloudData) {
-      state.tasks = cloudTasks;
-      state.groups = mergeGroupsFromTasks(cloudGroups, cloudTasks);
+      // Timestamp-aware merge: a row that was edited locally more recently
+      // than the incoming cloud version wins, instead of the cloud pull
+      // blindly overwriting it (blanket last-write-wins on every pull).
+      const taskMerge = mergeByTimestamp(state.tasks, cloudTasks);
+      const groupMerge = mergeByTimestamp(state.groups, cloudGroups);
+      state.tasks = taskMerge.merged;
+      state.groups = mergeGroupsFromTasks(groupMerge.merged, state.tasks);
       await repositories.importData({ tasks: state.tasks, groups: state.groups });
       renderGroups();
       updateGroupDatalist();
       renderTasks();
       if (!silent) setAuthMessage("Signed in. Loaded cloud data for this account.", false);
+
+      // Reconcile: push back any local rows that beat the incoming cloud version.
+      if (taskMerge.localWins.length) void cloudUpsertTasks(taskMerge.localWins);
+      groupMerge.localWins.forEach(group => void cloudUpsertGroup(group));
     } else if (!silent && (!previousUserId || previousUserId !== userId)) {
       setAuthMessage("Signed in. No cloud data yet, continuing with local data.", false);
     }
@@ -414,7 +423,8 @@ function mapCloudTasks(rows) {
       priority,
       notes: normalizeNotes(typeof row.notes === "string" ? row.notes : ""),
       completed: !!row.completed,
-      order: Number.isFinite(row.sort_order) ? row.sort_order : index
+      order: Number.isFinite(row.sort_order) ? row.sort_order : index,
+      updatedAt: row.updated_at || null
     };
   });
 }
@@ -424,8 +434,34 @@ function mapCloudGroups(rows) {
     .filter(row => typeof row.name === "string" && row.name.trim())
     .map(row => ({
       id: row.id || createId(),
-      name: row.name.trim()
+      name: row.name.trim(),
+      updatedAt: row.updated_at || null
     }));
+}
+
+// Picks, per id, whichever of the local/cloud version has the newer
+// `updatedAt`. Ids only present in cloud are added; ids only present locally
+// are dropped (already-flushed local deletes/creates are reflected in cloud).
+function mergeByTimestamp(localItems, cloudItems) {
+  const localById = new Map(localItems.map(item => [item.id, item]));
+  const localWins = [];
+
+  const merged = cloudItems.map(cloudItem => {
+    const localItem = localById.get(cloudItem.id);
+    if (localItem && isNewerTimestamp(localItem.updatedAt, cloudItem.updatedAt)) {
+      localWins.push(localItem);
+      return localItem;
+    }
+    return cloudItem;
+  });
+
+  return { merged, localWins };
+}
+
+function isNewerTimestamp(candidateIso, baselineIso) {
+  if (!candidateIso) return false;
+  if (!baselineIso) return true;
+  return new Date(candidateIso).getTime() > new Date(baselineIso).getTime();
 }
 
 function mergeGroupsFromTasks(groups, tasks) {
@@ -482,16 +518,18 @@ function toCloudTaskRow(task, userId) {
     completed: !!task.completed,
     sort_order: task.order,
     // set explicitly since DB trigger may not be present/active
-    updated_at: new Date().toISOString()
+    updated_at: task.updatedAt || new Date().toISOString()
   };
 }
 
 function toCloudGroupRow(group, userId) {
-  return { id: group.id, user_id: userId, name: group.name, updated_at: new Date().toISOString() };
+  return { id: group.id, user_id: userId, name: group.name, updated_at: group.updatedAt || new Date().toISOString() };
 }
 
 async function cloudUpsertTasks(tasks) {
   if (!isCloudSyncEnabled() || !tasks.length) return;
+  const now = new Date().toISOString();
+  tasks.forEach(task => { task.updatedAt = now; });
   const ctx = getCloudContext();
 
   if (!ctx) {
@@ -542,6 +580,7 @@ async function cloudDeleteTasks(taskIds) {
 
 async function cloudUpsertGroup(group) {
   if (!isCloudSyncEnabled()) return;
+  group.updatedAt = new Date().toISOString();
   const ctx = getCloudContext();
 
   if (!ctx) {
