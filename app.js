@@ -1676,6 +1676,12 @@ function handleImportFile(event) {
       renderGroups();
       updateGroupDatalist();
       renderTasks();
+      // Push imported data to cloud too, so it survives the next pull/realtime
+      // sync instead of being silently dropped or overwritten by stale cloud state.
+      if (isCloudSyncEnabled()) {
+        if (state.groups.length) await Promise.all(state.groups.map(group => cloudUpsertGroup(group)));
+        if (state.tasks.length) await cloudUpsertTasks(state.tasks);
+      }
       alert("Import complete: " + state.tasks.length + " tasks, " + state.groups.length + " groups.");
     } catch (err) {
       alert("Import failed: " + err.message);

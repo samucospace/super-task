@@ -12,10 +12,10 @@ Auth shell, session bootstrap, and cloud read/write sync are implemented and tes
 - Multi-device model: cloud is always pulled fresh on sign-in/reload (no "trust this device" shortcut), since laptop + phone concurrent use is the primary use case.
 - Realtime sync: while signed in, the app subscribes to Supabase Realtime `postgres_changes` on `tasks`/`groups` (filtered by `user_id`) and pulls fresh data (debounced ~500ms) when another tab/device changes data, so open sessions stay in sync without a manual refresh. Requires Realtime enabled on both tables (see `SUPABASE_SETUP.md`).
 - Timestamp-aware conflict handling: every task/group carries an `updatedAt` timestamp set on each local push. Cloud pulls merge per-record by comparing `updatedAt` instead of blindly overwriting local state; whichever side is newer wins, and any local row that beat the incoming cloud version is re-pushed to reconcile.
+- Local-to-cloud migration: importing a JSON backup (existing Import Backup feature) now also pushes the imported tasks/groups to Supabase when signed in (or queues them via `sync-queue.js` if signed out/offline), so restoring a backup on a fresh sign-in actually migrates that data into the cloud account instead of being silently dropped or overwritten by the next pull.
 
 Not yet implemented (see `IMPLEMENTATION_ROADMAP.md` for sequencing):
 
-- One-time explicit local-to-cloud migration action (existing local data is currently just included in the normal write-sync path, not a guided one-time import).
 - Android/Capacitor packaging and hosted deployment.
 
 ## Goal
@@ -325,7 +325,6 @@ Auth planning becomes auth implementation complete when:
 
 ## Suggested Next Build Task
 
-Auth + read/write cloud sync + offline queue + realtime sync + timestamp-aware conflict handling are implemented (see Status section above). Recommended next slices, in order:
+Auth + read/write cloud sync + offline queue + realtime sync + timestamp-aware conflict handling + backup-import cloud migration are implemented (see Status section above). Recommended next slice:
 
-1. A guided one-time "migrate local data into this account" action for first-time sign-in, separate from the ongoing write-sync path.
-2. Hosted deployment + Android/Capacitor packaging per `IMPLEMENTATION_ROADMAP.md`.
+1. Hosted deployment + Android/Capacitor packaging per `IMPLEMENTATION_ROADMAP.md`.
