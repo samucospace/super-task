@@ -19,7 +19,11 @@ window.SuperTaskBootstrap = (() => {
     applyColumnWidths();
 
     const savedViewMode = localStorage.getItem("super-task-view-mode");
-    if (savedViewMode === "cards") {
+    if (savedViewMode === "cards" || savedViewMode === "list") {
+      state.viewMode = savedViewMode;
+    } else if (window.innerWidth <= 700) {
+      // No explicit preference yet: default to the mobile-friendlier card
+      // view on narrow screens instead of the wide table view.
       state.viewMode = "cards";
     }
     applyViewMode(false);
