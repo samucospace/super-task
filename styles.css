@@ -104,6 +104,7 @@ textarea {
   gap: 12px;
   flex-wrap: wrap;
   position: relative;
+  z-index: 35;
 }
 
 .hero-panel::after {

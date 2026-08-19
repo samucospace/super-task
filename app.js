@@ -362,7 +362,7 @@ function renderAuthState() {
 
   if (authUserEmail) {
     authUserEmail.hidden = !isSignedIn;
-    authUserEmail.textContent = isSignedIn ? `Cloud connected · ${state.auth.user?.email || "your account"}` : "";
+    authUserEmail.textContent = isSignedIn ? `Cloud account connected · ${state.auth.user?.email || "your account"}` : "";
   }
 
   if (authSignOutBtn) {
@@ -445,7 +445,6 @@ async function loadCloudDataForUser(userId, previousUserId, options = {}) {
     }
 
     cloudBootstrapUserId = userId;
-    if (!silent) setStorageStatus("Cloud account connected", false);
   } catch (err) {
     console.error("Cloud bootstrap failed.", err);
     if (!silent) {
