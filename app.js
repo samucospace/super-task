@@ -362,7 +362,7 @@ function renderAuthState() {
 
   if (authUserEmail) {
     authUserEmail.hidden = !isSignedIn;
-    authUserEmail.textContent = isSignedIn ? `Cloud account connected · ${state.auth.user?.email || "your account"}` : "";
+    authUserEmail.textContent = isSignedIn ? `Logged in - ${state.auth.user?.email || "your account"}` : "";
   }
 
   if (authSignOutBtn) {
@@ -392,7 +392,6 @@ async function loadCloudDataForUser(userId, previousUserId, options = {}) {
   if (!client || !userId) return;
 
   cloudBootstrapInFlight = true;
-  if (!silent) setStorageStatus("Loading cloud data...", false);
 
   // Push any pending offline edits before pulling, so this device's own
   // recent changes aren't lost by the pull that treats cloud as truth.

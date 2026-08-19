@@ -295,8 +295,11 @@ h1 {
 
 .more-menu-list .ghost-button,
 .more-menu-list .import-label {
+  display: flex;
+  align-items: center;
   justify-content: flex-start;
   width: 100%;
+  text-align: left;
 }
 
 .more-menu-divider {
