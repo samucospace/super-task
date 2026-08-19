@@ -1235,7 +1235,7 @@ function renderTaskTable(tasks) {
   const isManual = state.sort.key === "order";
 
   if (!tasks.length) {
-    tableBody.innerHTML = '<tr class="empty-row"><td colspan="8">No tasks yet. Add one above to get started.</td></tr>';
+    tableBody.innerHTML = '<tr class="empty-row"><td colspan="8">No tasks yet — add your first one above to get started.</td></tr>';
     return;
   }
 
@@ -1306,7 +1306,7 @@ function renderGroupCards(tasks) {
   });
 
   if (!orderedGroups.length) {
-    groupCardBoard.innerHTML = '<p class="group-card-empty">No open tasks to show in card view.</p>';
+    groupCardBoard.innerHTML = '<p class="group-card-empty">Nothing open here — completed tasks are hidden in card view.</p>';
     return;
   }
 
