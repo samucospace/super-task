@@ -22,6 +22,9 @@ Live deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Workers
 - Offline-safe cloud sync: edits made offline or signed-out are queued locally and pushed automatically once signed in and online
 - Realtime sync between open tabs/devices for the same account (no manual refresh needed)
 - Timestamp-aware conflict handling so a stale cloud pull can't clobber a more recent local edit
+- Compact header: secondary actions (Export/Import backup, Refresh from cloud, Sign out) live under a single "More ⋮" menu
+- Card view is used automatically on narrow/mobile screens until you explicitly pick a view (your choice is then remembered)
+- Live task/group counts and a group count badge on the Groups toggle for quick at-a-glance status
 
 ## Open The App
 
@@ -39,9 +42,9 @@ The app works fully local-only with no Supabase configuration. Cloud sync is opt
 3. Toggle completion with the checkbox.
 4. Use the drag handle to reorder tasks (only when sort is in manual mode).
 5. Use column headers to sort and cycle back to manual ordering.
-6. Open Groups to manage saved groups.
-7. Use Export backup and Import backup to move data between devices.
-8. If cloud sync is configured, sign in with a magic link to sync tasks/groups across devices.
+6. Open Groups to manage saved groups (the button shows a live count of your groups).
+7. Open the "More ⋮" menu for Export backup and Import backup.
+8. If cloud sync is configured, sign in with a magic link to sync tasks/groups across devices; once signed in, "Refresh from cloud" and "Sign out" are also in the "More ⋮" menu.
 
 ## Cloud Sync (Optional)
 
@@ -50,7 +53,8 @@ See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for full setup steps. In short:
 - Copy `auth-config.example.js` to `auth-config.js` and add your Supabase project URL + anon key.
 - Sign in with the magic-link form in the app header.
 - While signed in, the cloud copy (Supabase `tasks`/`groups` tables) is treated as the source of truth: every app load / sign-in pulls the latest cloud data, and every local task/group edit is pushed to the cloud immediately.
-- If offline or signed out, edits are saved locally and queued; a "N changes pending sync" indicator shows in the header, and affected rows get a small amber marker. Queued changes push automatically once you're back online and signed in (also retried on a timer and on browser reconnect), or you can use "Refresh from cloud" / re-visit the app to trigger a push+pull.
+- If offline or signed out, edits are saved locally and queued; a "N changes pending sync" indicator shows in the header, and affected rows get a small amber marker. Queued changes push automatically once you're back online and signed in (also retried on a timer and on browser reconnect), or you can use "Refresh from cloud" (in the "More ⋮" menu) / re-visit the app to trigger a push+pull.
+- Once signed in, the header shows a single combined "Logged in - your@email.com" pill; "Refresh from cloud" and "Sign out" live in the "More ⋮" menu.
 - While signed in, other open tabs/devices on the same account are notified of changes via Supabase Realtime and refresh automatically (requires Realtime enabled on the `tasks`/`groups` tables; see [SUPABASE_SETUP.md](SUPABASE_SETUP.md)).
 - Each task/group tracks an `updatedAt` timestamp; cloud pulls merge per-record instead of blanket-overwriting, so a more recently edited local row survives a pull from slightly older cloud data.
 - Import backup and Export backup remain available at all times (including signed out) for local testing and manual backups. Importing a backup while signed in also pushes the imported data to your cloud account, so it survives future syncs.

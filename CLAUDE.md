@@ -37,16 +37,18 @@ Super Task is a task board app built from static files, local-first by default w
 - Notes editing uses compact preview + popup editor + Done/ESC/blur close
 - Manual drag-and-drop ordering when sort mode is manual
 - Sort cycle on sortable columns: asc -> desc -> manual order
-- Group management panel (add/rename/delete)
-- Export/import backup as JSON
+- Group management panel (add/rename/delete); the Groups toggle button shows a live count badge
+- Export/import backup as JSON, accessible from the "More ⋮" header menu (along with Refresh from cloud / Sign out once signed in)
 - Delete completed tasks action
+- Card view is used automatically on narrow/mobile screens until the user explicitly toggles the view once; their choice is then remembered
+- Header keeps routine status pills hidden (e.g. storage-status only shows for an actual problem) and shows a single combined "Logged in - your@email.com" pill once signed in
 
 ## Auth And Cloud Sync (Current State)
 
 - Supabase Auth via email magic link, implemented in `auth.js`.
 - Handles magic-link callback (`code`, `token_hash`, and hash-based tokens) and cleans the URL after.
 - Signed-out users still get full local app functionality (local-testing mode); only the auth panel plus signed-in-only controls change visibility.
-- Import/Export backup are always visible, even signed out.
+- Import/Export backup are always visible (in the "More ⋮" menu), even signed out.
 - Cloud is treated as the source of truth once signed in: every sign-in / app load / manual "Refresh from cloud" pulls tasks/groups for that `user_id` and overwrites local state.
 - Every task/group create/update/delete is pushed to Supabase (`tasks`/`groups` tables) immediately after the local write, scoped by `user_id`, using soft deletes (`deleted_at`).
 - Offline/signed-out edits are captured by a persistent local queue (`sync-queue.js`, localStorage key `super-task-sync-queue`) and flushed automatically: on reconnect (`online` event), on a 30s timer, and before every cloud pull (so local edits push before being possibly overwritten).
@@ -78,6 +80,8 @@ Super Task is a task board app built from static files, local-first by default w
 - Avoid introducing build tools or frameworks unless explicitly requested.
 - When touching cloud sync code, keep writes awaited (not fire-and-forget) so reload-triggered cloud pulls can't race ahead of an in-flight write.
 - Any new task/group mutation path must also queue for offline sync when not signed in or when the cloud write fails (see `cloudUpsertTasks`/`cloudDeleteTasks`/`cloudUpsertGroup`/`cloudDeleteGroup` in `app.js`).
+- When any code reindexes/renumbers multiple tasks locally (e.g. inserting above completed tasks, deleting and shifting survivors), push the full updated task list to cloud, not just the single changed task, or other rows' `sort_order` goes stale (see `addTask`/`deleteTask`/`deleteCompletedTasks` in `repositories.js`).
+- CSS gotcha: an element toggled via the `hidden` DOM property in JS won't actually hide if its CSS rule also sets an explicit `display` (e.g. `display: grid/flex`) without a matching `.your-class[hidden] { display: none; }` override - the explicit `display` wins over the browser's default `[hidden]` rule.
 
 ## Quick Validation Checklist
 

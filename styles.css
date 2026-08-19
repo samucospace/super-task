@@ -139,18 +139,6 @@ textarea {
   justify-content: flex-end;
 }
 
-.auth-user-area {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
-}
-
-.auth-user-area[hidden] {
-  display: none;
-}
-
 .auth-user-email {
   max-width: 280px;
   overflow: hidden;

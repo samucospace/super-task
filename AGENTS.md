@@ -61,15 +61,21 @@ Task shape (logical):
 
 ## Current UI Modes
 
+- Header layout:
+  - "Card view"/"Table view" toggle, "Groups" toggle (with a live group-count badge), and a "More \u22ee" dropdown menu (Export backup, Import backup, and, once signed in, a divider then Refresh from cloud + Sign out). The More menu closes on outside click or Escape.
+  - The storage-status pill (e.g. "Using local fallback") is hidden unless there's an actual problem; a healthy IndexedDB/cloud state shows no pill.
+  - Once signed in, a single combined pill reads "Logged in - your@email.com" instead of separate cloud-status/email indicators.
 - List/table mode:
   - Inline editing in table rows.
   - Manual drag reorder when sort is manual (`order`).
   - Sort cycle on sortable columns: asc -> desc -> manual order.
+  - Table columns are user-resizable (persisted); defaults are intentionally compact so the table fits typical laptop widths without horizontal scrolling.
 - Card mode:
   - One card per group.
   - Cards size dynamically by open-task count.
   - Completed tasks are not shown in card mode.
   - Clicking a card opens a modal with that group task list.
+  - Used automatically on narrow/mobile screens (\u2264700px) until the user explicitly toggles the view once; after that their choice is remembered in `localStorage`.
 - Group modal:
   - Table-style editing for only that group.
   - Add task to group action in modal header.
@@ -88,6 +94,7 @@ Task shape (logical):
 - Keep state transitions explicit and render after sync as already patterned.
 - When adding controls, wire both click and keyboard behavior where relevant.
 - Keep CSS aligned with existing tokenized style in `:root`.
+- Gotcha: if an element is shown/hidden via the `hidden` DOM property/attribute in JS, and its CSS rule sets an explicit `display` (e.g. `display: grid/flex`), that overrides the browser's default `[hidden] { display: none }` and the element never actually hides. Add a matching `.your-class[hidden] { display: none; }` rule (see `.table-frame[hidden]`, `.group-modal[hidden]`, `.auth-gate[hidden]`, `.more-menu-list[hidden]` for the existing pattern).
 
 ## Validation Checklist (After Changes)
 
