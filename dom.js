@@ -42,7 +42,9 @@ window.SuperTaskDom = (() => {
       addGroupForm: doc.querySelector("#add-group-form"),
       newGroupNameInput: doc.querySelector("#new-group-name"),
       exportBtn: doc.querySelector("#export-btn"),
-      importFile: doc.querySelector("#import-file")
+      importFile: doc.querySelector("#import-file"),
+      moreMenuBtn: doc.querySelector("#more-menu-btn"),
+      moreMenuList: doc.querySelector("#more-menu-list")
     };
   }
 

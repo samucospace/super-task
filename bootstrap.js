@@ -81,8 +81,12 @@ window.SuperTaskBootstrap = (() => {
     dom.groupModalAddTaskBtn.addEventListener("click", handlers.handleGroupModalAddTask);
     dom.groupModal.addEventListener("click", handlers.handleGroupModalShellClick);
     document.addEventListener("keydown", handlers.handleDocumentKeydown);
+    document.addEventListener("click", handlers.handleDocumentClick);
     dom.exportBtn.addEventListener("click", handlers.exportBackup);
     dom.importFile.addEventListener("change", handlers.handleImportFile);
+    if (dom.moreMenuBtn) {
+      dom.moreMenuBtn.addEventListener("click", handlers.toggleMoreMenu);
+    }
   }
 
   return { initializePreferences, attachEventListeners };

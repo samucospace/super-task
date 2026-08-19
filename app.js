@@ -104,7 +104,9 @@ const {
   addGroupForm,
   newGroupNameInput,
   exportBtn,
-  importFile
+  importFile,
+  moreMenuBtn,
+  moreMenuList
 } = window.SuperTaskDom.getDomRefs();
 
 document.addEventListener("DOMContentLoaded", initializeApp);
@@ -164,7 +166,8 @@ function attachEventListeners() {
       groupModalAddTaskBtn,
       groupModal,
       exportBtn,
-      importFile
+      importFile,
+      moreMenuBtn
     },
     handlers: {
       handleTaskSubmit,
@@ -204,7 +207,10 @@ function attachEventListeners() {
       handleGroupModalShellClick,
       handleDocumentKeydown,
       exportBackup,
-      handleImportFile
+      handleImportFile,
+      toggleMoreMenu,
+      closeMoreMenu,
+      handleDocumentClick
     },
     setDragHandleActive(value) {
       dragHandleActive = value;
@@ -216,6 +222,28 @@ function handleDocumentKeydown(event) {
   if (event.key === "Escape" && state.groupModal.open) {
     closeGroupModal();
   }
+  if (event.key === "Escape") {
+    closeMoreMenu();
+  }
+}
+
+function toggleMoreMenu() {
+  if (!moreMenuList || !moreMenuBtn) return;
+  const willOpen = moreMenuList.hidden;
+  moreMenuList.hidden = !willOpen;
+  moreMenuBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+}
+
+function closeMoreMenu() {
+  if (!moreMenuList || moreMenuList.hidden) return;
+  moreMenuList.hidden = true;
+  moreMenuBtn?.setAttribute("aria-expanded", "false");
+}
+
+function handleDocumentClick(event) {
+  if (!moreMenuList || moreMenuList.hidden) return;
+  if (event.target.closest(".more-menu")) return;
+  closeMoreMenu();
 }
 
 async function handleAuthSubmit(event) {
@@ -1057,11 +1085,18 @@ function toggleGroupsPanel() {
   const hidden = groupsPanel.hasAttribute("hidden");
   if (hidden) {
     groupsPanel.removeAttribute("hidden");
-    toggleGroupsBtn.innerHTML = "Groups &#9650;";
   } else {
     groupsPanel.setAttribute("hidden", "");
-    toggleGroupsBtn.innerHTML = "Groups &#9660;";
   }
+  updateGroupsToggleLabel();
+}
+
+function updateGroupsToggleLabel() {
+  if (!toggleGroupsBtn) return;
+  const isOpen = !groupsPanel.hasAttribute("hidden");
+  const arrow = isOpen ? "&#9650;" : "&#9660;";
+  const count = state.groups.length;
+  toggleGroupsBtn.innerHTML = `Groups <span class="groups-count">${count}</span> ${arrow}`;
 }
 
 function handleAddGroup(event) {
@@ -1127,6 +1162,7 @@ function handleGroupsListKeydown(event) {
 }
 
 function renderGroups() {
+  updateGroupsToggleLabel();
   groupsList.innerHTML = "";
   const sorted = [...state.groups].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
   if (!sorted.length) {
@@ -1678,11 +1714,13 @@ function exportBackup() {
   a.download = "super-task-backup-" + todayString() + ".json";
   a.click();
   URL.revokeObjectURL(url);
+  closeMoreMenu();
 }
 
 function handleImportFile(event) {
   const file = event.target.files[0];
   if (!file) return;
+  closeMoreMenu();
   const reader = new FileReader();
   reader.onload = async (e) => {
     try {
