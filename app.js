@@ -1913,4 +1913,7 @@ function todayString() {
 function setStorageStatus(msg, warn) {
   storageStatus.textContent = msg;
   storageStatus.classList.toggle("warning", warn);
+  // Only surface this pill for actual problems (fallback storage, failed
+  // cloud load) - routine "storage is fine" messages add noise, not value.
+  storageStatus.hidden = !warn;
 }
