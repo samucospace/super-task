@@ -7,11 +7,11 @@ window.SuperTaskCore = (() => {
   const GROUP_COLORS = ["#b0dd48", "#8e59e8", "#ea408d", "#6f9cff", "#79c58c", "#f2b35a", "#5fd3d4"];
   const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2, None: 3 };
   const DEFAULT_COL_WIDTHS = {
-    "col-item": 360,
-    "col-group": 200,
-    "col-due": 160,
-    "col-priority": 140,
-    "col-notes": 220
+    "col-item": 280,
+    "col-group": 150,
+    "col-due": 130,
+    "col-priority": 110,
+    "col-notes": 180
   };
 
   function createInitialState() {
