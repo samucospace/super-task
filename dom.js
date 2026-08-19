@@ -44,7 +44,8 @@ window.SuperTaskDom = (() => {
       exportBtn: doc.querySelector("#export-btn"),
       importFile: doc.querySelector("#import-file"),
       moreMenuBtn: doc.querySelector("#more-menu-btn"),
-      moreMenuList: doc.querySelector("#more-menu-list")
+      moreMenuList: doc.querySelector("#more-menu-list"),
+      moreMenuAccountDivider: doc.querySelector("#more-menu-account-divider")
     };
   }
 

@@ -23,11 +23,7 @@
       <div class="hero-right">
         <span class="status-pill" id="storage-status">Loading storage...</span>
         <span class="status-pill" id="sync-status-pill" hidden></span>
-        <div class="auth-user-area" id="auth-user-area" hidden>
-          <span class="status-pill auth-user-email" id="auth-user-email"></span>
-          <button class="ghost-button" id="auth-refresh-btn" type="button">Refresh from cloud</button>
-          <button class="ghost-button" id="auth-sign-out-btn" type="button">Sign out</button>
-        </div>
+        <span class="status-pill auth-user-email" id="auth-user-email" hidden></span>
         <div class="hero-buttons">
           <button class="ghost-button auth-protected" id="toggle-view-btn" type="button" aria-pressed="false">Card view</button>
           <button class="ghost-button auth-protected" id="toggle-groups-btn" type="button">Groups &#9660;</button>
@@ -36,6 +32,9 @@
             <div class="more-menu-list" id="more-menu-list" hidden>
               <button class="ghost-button" id="export-btn" type="button">Export backup</button>
               <label class="ghost-button import-label">Import backup<input type="file" id="import-file" accept=".json"></label>
+              <hr class="more-menu-divider" id="more-menu-account-divider" hidden>
+              <button class="ghost-button" id="auth-refresh-btn" type="button" hidden>Refresh from cloud</button>
+              <button class="ghost-button" id="auth-sign-out-btn" type="button" hidden>Sign out</button>
             </div>
           </div>
         </div>

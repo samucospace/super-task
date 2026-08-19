@@ -68,7 +68,6 @@ const {
   authForm,
   authEmailInput,
   authMessage,
-  authUserArea,
   authUserEmail,
   authRefreshBtn,
   authSignOutBtn,
@@ -106,7 +105,8 @@ const {
   exportBtn,
   importFile,
   moreMenuBtn,
-  moreMenuList
+  moreMenuList,
+  moreMenuAccountDivider
 } = window.SuperTaskDom.getDomRefs();
 
 document.addEventListener("DOMContentLoaded", initializeApp);
@@ -260,11 +260,13 @@ async function handleAuthSubmit(event) {
 }
 
 async function handleAuthSignOut() {
+  closeMoreMenu();
   const result = await authService.signOut();
   setAuthMessage(result.message, !result.ok);
 }
 
 async function handleAuthRefresh() {
+  closeMoreMenu();
   const userId = state.auth.user?.id || null;
   if (!userId || cloudBootstrapInFlight) return;
   await loadCloudDataForUser(userId, userId);
@@ -358,16 +360,21 @@ function renderAuthState() {
     authGate.hidden = state.auth.mode === "disabled" || isSignedIn;
   }
 
-  if (authUserArea) {
-    authUserArea.hidden = !isSignedIn;
-  }
-
   if (authUserEmail) {
-    authUserEmail.textContent = state.auth.user?.email || "Signed in";
+    authUserEmail.hidden = !isSignedIn;
+    authUserEmail.textContent = isSignedIn ? `Cloud connected · ${state.auth.user?.email || "your account"}` : "";
   }
 
   if (authSignOutBtn) {
     authSignOutBtn.hidden = !isSignedIn;
+  }
+
+  if (authRefreshBtn) {
+    authRefreshBtn.hidden = !isSignedIn;
+  }
+
+  if (moreMenuAccountDivider) {
+    moreMenuAccountDivider.hidden = !isSignedIn;
   }
 
   setAuthMessage(state.auth.message || "", false);
