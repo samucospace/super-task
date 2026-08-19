@@ -135,6 +135,10 @@ textarea {
   align-items: center;
 }
 
+.auth-user-area[hidden] {
+  display: none;
+}
+
 .auth-user-email {
   max-width: 280px;
   overflow: hidden;
@@ -253,6 +257,10 @@ h1 {
   grid-template-columns: minmax(260px, 1.2fr) minmax(280px, 1fr);
   gap: 16px;
   align-items: end;
+}
+
+.auth-gate[hidden] {
+  display: none;
 }
 
 .auth-gate-copy {
