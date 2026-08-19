@@ -68,6 +68,7 @@ textarea {
   width: min(1420px, calc(100vw - 28px));
   margin: 14px auto 22px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -1123,15 +1124,15 @@ tr.is-complete .task-date-input {
   }
 
   .auth-gate {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .auth-form {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .task-form {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .task-form .primary-button {
@@ -1152,7 +1153,7 @@ tr.is-complete .task-date-input {
   }
 
   .task-form {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .task-table {
