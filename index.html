@@ -269,6 +269,16 @@
         .catch((error) => {
           console.log("Service Worker registration failed:", error);
         });
+
+      // A new service worker taking over means new app code is available;
+      // reload once so already-open tabs pick it up instead of continuing
+      // to run stale JS against fresh cloud data.
+      let refreshedForNewServiceWorker = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (refreshedForNewServiceWorker) return;
+        refreshedForNewServiceWorker = true;
+        window.location.reload();
+      });
     }
   </script>
 </body>

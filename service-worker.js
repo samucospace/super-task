@@ -1,7 +1,7 @@
 // Super Task Service Worker
 // Enables offline support, caching, and installation as a native-like app
 
-const CACHE_NAME = "super-task-v3";
+const CACHE_NAME = "super-task-v4";
 const ASSETS_TO_CACHE = [
   "./index.html",
   "./styles.css",
@@ -44,7 +44,9 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch event: serve from cache, fallback to network
+// Fetch event: network-first for app shell files (so fixes/deploys are picked
+// up immediately when online), falling back to cache when offline. This
+// avoids indefinitely serving a stale cached app.js/index.html once cached.
 self.addEventListener("fetch", (event) => {
   // Skip non-GET requests
   if (event.request.method !== "GET") {
@@ -52,33 +54,22 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      // Return cached version if available
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      // Otherwise, fetch from network
-      return fetch(event.request)
-        .then((response) => {
-          // Don't cache non-successful responses
-          if (!response || response.status !== 200) {
-            return response;
-          }
-
-          // Clone the response for caching
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
+    fetch(event.request)
+      .then((response) => {
+        if (!response || response.status !== 200) {
           return response;
-        })
-        .catch(() => {
-          // Offline fallback: return cached index.html if available
-          return caches.match("./index.html");
+        }
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
         });
-    })
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          return cachedResponse || caches.match("./index.html");
+        });
+      })
   );
 });
 
