@@ -38,6 +38,8 @@ const repositories = window.SuperTaskRepositories.createRepositories({
 // Drag state
 let dragSrcId = null;
 let dragHandleActive = false;
+let cardDragSrcId = null;
+let cardDragSrcGroup = null;
 
 // Resize state
 let resizeState = null;
@@ -206,6 +208,11 @@ function attachEventListeners() {
       handleCardBoardChange,
       handleCardBoardClick,
       handleCardBoardKeydown,
+      handleCardDragStart,
+      handleCardDragOver,
+      handleCardDragLeave,
+      handleCardDrop,
+      handleCardDragEnd,
       handleGroupModalTableClick,
       handleGroupModalTableChange,
       handleGroupModalTableInput,
@@ -1123,12 +1130,17 @@ function handleDrop(event) {
   if (!targetRow || !dragSrcId || targetRow.dataset.taskId === dragSrcId) return;
 
   const insertAfter = event.clientY >= targetRow.getBoundingClientRect().top + targetRow.getBoundingClientRect().height / 2;
+  reorderManualTasks(dragSrcId, targetRow.dataset.taskId, insertAfter);
+}
+
+function reorderManualTasks(srcId, targetId, insertAfter) {
   const ordered = getManualTasks();
-  const srcIdx  = ordered.findIndex(t => t.id === dragSrcId);
-  const tgtId   = targetRow.dataset.taskId;
+  const srcIdx = ordered.findIndex(t => t.id === srcId);
+  const tgtIdx = ordered.findIndex(t => t.id === targetId);
+  if (srcIdx === -1 || tgtIdx === -1) return;
 
   const [removed] = ordered.splice(srcIdx, 1);
-  const newTgtIdx = ordered.findIndex(t => t.id === tgtId);
+  const newTgtIdx = ordered.findIndex(t => t.id === targetId);
   ordered.splice(insertAfter ? newTgtIdx + 1 : newTgtIdx, 0, removed);
   ordered.forEach((t, i) => { t.order = i; });
   state.tasks = ordered;
@@ -1144,6 +1156,50 @@ function handleDragEnd() {
 
 function clearDropClasses() {
   document.querySelectorAll(".drop-above, .drop-below").forEach(el => el.classList.remove("drop-above", "drop-below"));
+}
+
+// ── CARD DRAG REORDER (within the same group's card) ──────────────────────────
+
+function handleCardDragStart(event) {
+  const item = event.target.closest(".group-card-task[data-task-id]");
+  if (!item || !item.draggable) { event.preventDefault(); return; }
+  cardDragSrcId = item.dataset.taskId;
+  cardDragSrcGroup = item.dataset.groupName;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", cardDragSrcId);
+  item.classList.add("row-dragging");
+}
+
+function handleCardDragOver(event) {
+  const item = event.target.closest(".group-card-task[data-task-id]");
+  if (!item || item.dataset.taskId === cardDragSrcId || item.dataset.groupName !== cardDragSrcGroup) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  clearDropClasses();
+  const rect = item.getBoundingClientRect();
+  item.classList.add(event.clientY < rect.top + rect.height / 2 ? "drop-above" : "drop-below");
+}
+
+function handleCardDragLeave(event) {
+  const item = event.target.closest(".group-card-task[data-task-id]");
+  if (item && !item.contains(event.relatedTarget)) {
+    item.classList.remove("drop-above", "drop-below");
+  }
+}
+
+function handleCardDrop(event) {
+  const item = event.target.closest(".group-card-task[data-task-id]");
+  if (!item || !cardDragSrcId || item.dataset.taskId === cardDragSrcId || item.dataset.groupName !== cardDragSrcGroup) return;
+  event.preventDefault();
+  const insertAfter = event.clientY >= item.getBoundingClientRect().top + item.getBoundingClientRect().height / 2;
+  reorderManualTasks(cardDragSrcId, item.dataset.taskId, insertAfter);
+}
+
+function handleCardDragEnd() {
+  cardDragSrcId = null;
+  cardDragSrcGroup = null;
+  clearDropClasses();
+  document.querySelectorAll(".row-dragging").forEach(el => el.classList.remove("row-dragging"));
 }
 
 // ── SORT ──────────────────────────────────────────────────────────────────────
@@ -1475,9 +1531,11 @@ function renderGroupCards(tasks) {
         item.className = "group-card-task";
         item.classList.toggle("is-complete", task.completed);
         item.dataset.taskId = task.id;
+        item.dataset.groupName = groupName;
         item.tabIndex = 0;
         item.setAttribute("role", "button");
         item.setAttribute("aria-label", `Edit ${task.title}`);
+        item.draggable = state.sort.key === "order";
 
         const left = document.createElement("div");
         left.className = "group-card-task-main";

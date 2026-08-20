@@ -594,8 +594,9 @@ h1 {
   box-shadow: 0 14px 28px rgba(2, 6, 23, 0.34);
   padding: 10px;
   display: grid;
+  grid-template-rows: auto 1fr;
   gap: 10px;
-  align-content: start;
+  min-height: 0;
   overflow: hidden;
   cursor: pointer;
 }
@@ -637,10 +638,12 @@ h1 {
 .group-card-task-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 2px 0 0;
   display: grid;
   gap: 7px;
   align-content: start;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .group-card-task {
@@ -664,6 +667,14 @@ h1 {
 .group-card-task:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
+}
+
+.group-card-task[draggable="true"] {
+  cursor: grab;
+}
+
+.group-card-task[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 .group-card-task-main {
@@ -898,6 +909,14 @@ h1 {
 
 .row-dragging {
   opacity: 0.35;
+}
+
+.group-card-task.drop-above {
+  border-top: 2px solid rgba(59, 130, 246, 0.92);
+}
+
+.group-card-task.drop-below {
+  border-bottom: 2px solid rgba(59, 130, 246, 0.92);
 }
 
 .row-pending-sync td:first-child {

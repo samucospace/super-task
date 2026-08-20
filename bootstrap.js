@@ -73,6 +73,11 @@ window.SuperTaskBootstrap = (() => {
     dom.groupCardBoard.addEventListener("change", handlers.handleCardBoardChange);
     dom.groupCardBoard.addEventListener("click", handlers.handleCardBoardClick);
     dom.groupCardBoard.addEventListener("keydown", handlers.handleCardBoardKeydown);
+    dom.groupCardBoard.addEventListener("dragstart", handlers.handleCardDragStart);
+    dom.groupCardBoard.addEventListener("dragover", handlers.handleCardDragOver);
+    dom.groupCardBoard.addEventListener("dragleave", handlers.handleCardDragLeave);
+    dom.groupCardBoard.addEventListener("drop", handlers.handleCardDrop);
+    dom.groupCardBoard.addEventListener("dragend", handlers.handleCardDragEnd);
     dom.groupModalTableBody.addEventListener("click", handlers.handleGroupModalTableClick);
     dom.groupModalTableBody.addEventListener("change", handlers.handleGroupModalTableChange);
     dom.groupModalTableBody.addEventListener("input", handlers.handleGroupModalTableInput);
