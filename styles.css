@@ -801,7 +801,6 @@ h1 {
   z-index: 1;
   width: min(480px, 100%);
   max-height: min(90vh, 820px);
-  overflow-y: auto;
   display: grid;
   gap: 12px;
   border-radius: var(--radius-panel);
