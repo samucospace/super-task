@@ -106,7 +106,12 @@ const {
   importFile,
   moreMenuBtn,
   moreMenuList,
-  moreMenuAccountDivider
+  moreMenuAccountDivider,
+  openTaskModalBtn,
+  taskModal,
+  taskModalTitle,
+  taskModalCloseBtn,
+  taskFormSubmitBtn
 } = window.SuperTaskDom.getDomRefs();
 
 document.addEventListener("DOMContentLoaded", initializeApp);
@@ -167,7 +172,10 @@ function attachEventListeners() {
       groupModal,
       exportBtn,
       importFile,
-      moreMenuBtn
+      moreMenuBtn,
+      openTaskModalBtn,
+      taskModal,
+      taskModalCloseBtn
     },
     handlers: {
       handleTaskSubmit,
@@ -197,6 +205,7 @@ function attachEventListeners() {
       handleGroupsListKeydown,
       handleCardBoardChange,
       handleCardBoardClick,
+      handleCardBoardKeydown,
       handleGroupModalTableClick,
       handleGroupModalTableChange,
       handleGroupModalTableInput,
@@ -210,7 +219,10 @@ function attachEventListeners() {
       handleImportFile,
       toggleMoreMenu,
       closeMoreMenu,
-      handleDocumentClick
+      handleDocumentClick,
+      handleOpenTaskModalClick,
+      closeTaskModal,
+      handleTaskModalShellClick
     },
     setDragHandleActive(value) {
       dragHandleActive = value;
@@ -221,6 +233,9 @@ function attachEventListeners() {
 function handleDocumentKeydown(event) {
   if (event.key === "Escape" && state.groupModal.open) {
     closeGroupModal();
+  }
+  if (event.key === "Escape" && state.taskModal.open) {
+    closeTaskModal();
   }
   if (event.key === "Escape") {
     closeMoreMenu();
@@ -796,25 +811,90 @@ function applyViewMode(shouldPersist) {
 function handleTaskSubmit(event) {
   event.preventDefault();
   const groupName = groupInput.value.trim();
+  const title = titleInput.value.trim();
+  const dueDate = dueDateInput.value;
+  const priority = priorityInput.value;
+  const notes = normalizeNotes(notesInput.value.trim());
+  if (!title || !groupName || !dueDate) return;
+
+  if (state.taskModal.mode === "edit" && state.taskModal.taskId) {
+    const task = state.tasks.find(t => t.id === state.taskModal.taskId);
+    if (!task) {
+      closeTaskModal();
+      return;
+    }
+    task.title = title;
+    task.dueDate = dueDate;
+    task.priority = priority;
+    task.notes = notes;
+    repositories.persistTaskWithGroup(task, groupName).then(() => {
+      renderTasks();
+      updateGroupDatalist();
+      closeTaskModal();
+    });
+    return;
+  }
+
   const task = {
     id:        createId(),
-    title:     titleInput.value.trim(),
+    title,
     group:     groupName,
-    dueDate:   dueDateInput.value,
-    priority:  priorityInput.value,
-    notes:     normalizeNotes(notesInput.value.trim()),
+    dueDate,
+    priority,
+    notes,
     completed: false,
     order:     state.tasks.length
   };
-  if (!task.title || !task.group || !task.dueDate) return;
   repositories.addTask(task).then(() => {
     renderTasks();
-    form.reset();
-    closeComposerNotesEditor(false);
-    dueDateInput.value = todayString();
-    priorityInput.value = "Low";
-    titleInput.focus();
+    closeTaskModal();
   });
+}
+
+function openTaskModal(task) {
+  if (!taskModal) return;
+  state.taskModal.open = true;
+  state.taskModal.mode = task ? "edit" : "create";
+  state.taskModal.taskId = task ? task.id : null;
+
+  if (taskModalTitle) taskModalTitle.textContent = task ? "Edit task" : "Add task";
+  if (taskFormSubmitBtn) taskFormSubmitBtn.textContent = task ? "Save changes" : "Add task";
+
+  titleInput.value = task ? task.title : "";
+  groupInput.value = task ? task.group : "";
+  dueDateInput.value = task ? task.dueDate : todayString();
+  priorityInput.value = task ? task.priority : "Low";
+  notesInput.value = task ? normalizeNotes(task.notes) : "";
+  closeComposerNotesEditor(false);
+
+  taskModal.removeAttribute("hidden");
+  taskModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+  titleInput.focus();
+}
+
+function closeTaskModal() {
+  if (!taskModal) return;
+  state.taskModal.open = false;
+  state.taskModal.mode = "create";
+  state.taskModal.taskId = null;
+  taskModal.setAttribute("hidden", "");
+  taskModal.setAttribute("aria-hidden", "true");
+  if (!state.groupModal.open) {
+    document.body.classList.remove("modal-open");
+  }
+  form.reset();
+  closeComposerNotesEditor(false);
+}
+
+function handleTaskModalShellClick(event) {
+  if (event.target.closest("[data-close-task-modal='true']")) {
+    closeTaskModal();
+  }
+}
+
+function handleOpenTaskModalClick() {
+  openTaskModal();
 }
 
 function handleComposerClick(event) {
@@ -1394,6 +1474,10 @@ function renderGroupCards(tasks) {
         const item = document.createElement("li");
         item.className = "group-card-task";
         item.classList.toggle("is-complete", task.completed);
+        item.dataset.taskId = task.id;
+        item.tabIndex = 0;
+        item.setAttribute("role", "button");
+        item.setAttribute("aria-label", `Edit ${task.title}`);
 
         const left = document.createElement("div");
         left.className = "group-card-task-main";
@@ -1448,17 +1532,34 @@ function handleCardBoardChange(event) {
 }
 
 function handleCardBoardClick(event) {
-  if (!event.target.closest("input") && !event.target.closest("button")) {
-    const card = event.target.closest(".group-card");
-    if (card?.dataset.groupName) {
-      openGroupModal(card.dataset.groupName);
-      return;
-    }
+  const deleteBtn = event.target.closest(".card-task-delete");
+  if (deleteBtn?.dataset.taskId) {
+    repositories.deleteTask(deleteBtn.dataset.taskId).then(renderTasks);
+    return;
   }
 
-  const deleteBtn = event.target.closest(".card-task-delete");
-  if (!deleteBtn?.dataset.taskId) return;
-  repositories.deleteTask(deleteBtn.dataset.taskId).then(renderTasks);
+  if (event.target.closest("input") || event.target.closest("button")) return;
+
+  const taskItem = event.target.closest(".group-card-task");
+  if (taskItem?.dataset.taskId) {
+    const task = state.tasks.find(t => t.id === taskItem.dataset.taskId);
+    if (task) openTaskModal(task);
+    return;
+  }
+
+  const card = event.target.closest(".group-card");
+  if (card?.dataset.groupName) {
+    openGroupModal(card.dataset.groupName);
+  }
+}
+
+function handleCardBoardKeydown(event) {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const taskItem = event.target.closest(".group-card-task");
+  if (!taskItem?.dataset.taskId) return;
+  event.preventDefault();
+  const task = state.tasks.find(t => t.id === taskItem.dataset.taskId);
+  if (task) openTaskModal(task);
 }
 
 function openGroupModal(groupName) {
@@ -1477,7 +1578,9 @@ function closeGroupModal() {
   groupModal.setAttribute("hidden", "");
   groupModal.setAttribute("aria-hidden", "true");
   groupModalTableBody.innerHTML = "";
-  document.body.classList.remove("modal-open");
+  if (!state.taskModal.open) {
+    document.body.classList.remove("modal-open");
+  }
 }
 
 function handleGroupModalShellClick(event) {

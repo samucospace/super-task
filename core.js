@@ -30,7 +30,8 @@ window.SuperTaskCore = (() => {
       colWidths: { ...DEFAULT_COL_WIDTHS },
       editingGroupId: null,
       viewMode: "list",
-      groupModal: { open: false, groupName: "" }
+      groupModal: { open: false, groupName: "" },
+      taskModal: { open: false, mode: "create", taskId: null }
     };
   }
 

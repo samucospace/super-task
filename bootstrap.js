@@ -72,6 +72,7 @@ window.SuperTaskBootstrap = (() => {
     dom.groupsList.addEventListener("keydown", handlers.handleGroupsListKeydown);
     dom.groupCardBoard.addEventListener("change", handlers.handleCardBoardChange);
     dom.groupCardBoard.addEventListener("click", handlers.handleCardBoardClick);
+    dom.groupCardBoard.addEventListener("keydown", handlers.handleCardBoardKeydown);
     dom.groupModalTableBody.addEventListener("click", handlers.handleGroupModalTableClick);
     dom.groupModalTableBody.addEventListener("change", handlers.handleGroupModalTableChange);
     dom.groupModalTableBody.addEventListener("input", handlers.handleGroupModalTableInput);
@@ -86,6 +87,15 @@ window.SuperTaskBootstrap = (() => {
     dom.importFile.addEventListener("change", handlers.handleImportFile);
     if (dom.moreMenuBtn) {
       dom.moreMenuBtn.addEventListener("click", handlers.toggleMoreMenu);
+    }
+    if (dom.openTaskModalBtn) {
+      dom.openTaskModalBtn.addEventListener("click", handlers.handleOpenTaskModalClick);
+    }
+    if (dom.taskModalCloseBtn) {
+      dom.taskModalCloseBtn.addEventListener("click", handlers.closeTaskModal);
+    }
+    if (dom.taskModal) {
+      dom.taskModal.addEventListener("click", handlers.handleTaskModalShellClick);
     }
   }
 

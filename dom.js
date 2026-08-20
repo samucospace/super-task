@@ -45,7 +45,12 @@ window.SuperTaskDom = (() => {
       importFile: doc.querySelector("#import-file"),
       moreMenuBtn: doc.querySelector("#more-menu-btn"),
       moreMenuList: doc.querySelector("#more-menu-list"),
-      moreMenuAccountDivider: doc.querySelector("#more-menu-account-divider")
+      moreMenuAccountDivider: doc.querySelector("#more-menu-account-divider"),
+      openTaskModalBtn: doc.querySelector("#open-task-modal-btn"),
+      taskModal: doc.querySelector("#task-modal"),
+      taskModalTitle: doc.querySelector("#task-modal-title"),
+      taskModalCloseBtn: doc.querySelector("#task-modal-close-btn"),
+      taskFormSubmitBtn: doc.querySelector("#task-form-submit-btn")
     };
   }
 

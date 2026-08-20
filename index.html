@@ -68,44 +68,55 @@
     </section>
 
     <section class="composer-panel auth-protected">
-      <form id="task-form" class="task-form">
-        <label>
-          <span>Task</span>
-          <input id="task-title" name="title" type="text" maxlength="120" placeholder="Add a new task" required>
-        </label>
-        <label>
-          <span>Group</span>
-          <input id="task-group" name="group" type="text" maxlength="80" placeholder="Select or type group" list="group-datalist" required>
-          <datalist id="group-datalist"></datalist>
-        </label>
-        <label>
-          <span>Due date</span>
-          <input id="task-due-date" name="dueDate" type="date" required>
-        </label>
-        <label>
-          <span>Priority</span>
-          <select id="task-priority" name="priority">
-            <option value="High">High</option>
-            <option value="Medium">Medium</option>
-            <option value="Low" selected>Low</option>
-            <option value="None">None</option>
-          </select>
-        </label>
-        <label class="task-notes-create-wrap">
-          <span>Notes</span>
-          <div class="notes-cell composer-notes-cell">
-            <span id="composer-notes-preview" class="notes-preview is-empty" tabindex="0" role="button" aria-label="Open notes editor">No notes</span>
-            <div id="composer-notes-editor" class="notes-editor" hidden>
-              <textarea id="task-notes" name="notes" class="task-notes-text" maxlength="1000" rows="8" placeholder="Optional notes (up to 1000 characters)"></textarea>
-              <div class="notes-editor-footer">
-                <span id="composer-notes-count" class="notes-count">0/1000</span>
-                <button class="small-button composer-notes-done-btn" type="button">Done</button>
+      <button class="primary-button" id="open-task-modal-btn" type="button">+ Add task</button>
+    </section>
+
+    <section class="task-modal auth-protected" id="task-modal" hidden aria-hidden="true">
+      <div class="task-modal-backdrop" data-close-task-modal="true"></div>
+      <div class="task-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+        <div class="task-modal-header">
+          <h2 id="task-modal-title">Add task</h2>
+          <button class="icon-button" id="task-modal-close-btn" type="button" aria-label="Close task editor">&#10005;</button>
+        </div>
+        <form id="task-form" class="task-form">
+          <label>
+            <span>Task</span>
+            <input id="task-title" name="title" type="text" maxlength="120" placeholder="Add a new task" required>
+          </label>
+          <label>
+            <span>Group</span>
+            <input id="task-group" name="group" type="text" maxlength="80" placeholder="Select or type group" list="group-datalist" required>
+            <datalist id="group-datalist"></datalist>
+          </label>
+          <label>
+            <span>Due date</span>
+            <input id="task-due-date" name="dueDate" type="date" required>
+          </label>
+          <label>
+            <span>Priority</span>
+            <select id="task-priority" name="priority">
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low" selected>Low</option>
+              <option value="None">None</option>
+            </select>
+          </label>
+          <label class="task-notes-create-wrap">
+            <span>Notes</span>
+            <div class="notes-cell composer-notes-cell">
+              <span id="composer-notes-preview" class="notes-preview is-empty" tabindex="0" role="button" aria-label="Open notes editor">No notes</span>
+              <div id="composer-notes-editor" class="notes-editor" hidden>
+                <textarea id="task-notes" name="notes" class="task-notes-text" maxlength="1000" rows="8" placeholder="Optional notes (up to 1000 characters)"></textarea>
+                <div class="notes-editor-footer">
+                  <span id="composer-notes-count" class="notes-count">0/1000</span>
+                  <button class="small-button composer-notes-done-btn" type="button">Done</button>
+                </div>
               </div>
             </div>
-          </div>
-        </label>
-        <button class="primary-button" type="submit">Add task</button>
-      </form>
+          </label>
+          <button class="primary-button" type="submit" id="task-form-submit-btn">Add task</button>
+        </form>
+      </div>
     </section>
 
     <section class="board-panel auth-protected">
