@@ -53,7 +53,6 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  padding-top: env(safe-area-inset-top, 0px);
 }
 
 body {
@@ -70,6 +69,17 @@ body.modal-open {
   overflow: hidden;
 }
 
+.safe-area-top-spacer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--color-bg-base);
+  z-index: 100;
+  pointer-events: none;
+}
+
 button,
 input,
 select,
@@ -80,6 +90,7 @@ textarea {
 .app-shell {
   width: min(1420px, calc(100vw - 28px));
   margin: 14px auto 22px;
+  padding-top: env(safe-area-inset-top, 0px);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;

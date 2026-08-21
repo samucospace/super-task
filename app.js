@@ -148,17 +148,7 @@ async function initializeApp() {
     if (window.SuperTaskSyncQueue.getPendingCount() > 0) flushSyncQueue();
   }, 30000);
 
-  configureNativeStatusBar();
-
   await authService.init();
-}
-
-// Android draws the WebView edge-to-edge under the status bar by default;
-// stop it from overlaying so the header isn't hidden behind the system bar.
-function configureNativeStatusBar() {
-  if (!window.Capacitor?.isNativePlatform?.()) return;
-  const statusBar = window.Capacitor.Plugins?.StatusBar;
-  statusBar?.setOverlaysWebView?.({ overlay: false }).catch(() => {});
 }
 
 // ── EVENT LISTENERS ───────────────────────────────────────────────────────────
