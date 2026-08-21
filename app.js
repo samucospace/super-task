@@ -148,7 +148,17 @@ async function initializeApp() {
     if (window.SuperTaskSyncQueue.getPendingCount() > 0) flushSyncQueue();
   }, 30000);
 
+  configureNativeStatusBar();
+
   await authService.init();
+}
+
+// Android draws the WebView edge-to-edge under the status bar by default;
+// stop it from overlaying so the header isn't hidden behind the system bar.
+function configureNativeStatusBar() {
+  if (!window.Capacitor?.isNativePlatform?.()) return;
+  const statusBar = window.Capacitor.Plugins?.StatusBar;
+  statusBar?.setOverlaysWebView?.({ overlay: false }).catch(() => {});
 }
 
 // ── EVENT LISTENERS ───────────────────────────────────────────────────────────
@@ -252,8 +262,19 @@ function handleDocumentKeydown(event) {
 function toggleMoreMenu() {
   if (!moreMenuList || !moreMenuBtn) return;
   const willOpen = moreMenuList.hidden;
+  if (willOpen) {
+    positionMoreMenu();
+  }
   moreMenuList.hidden = !willOpen;
   moreMenuBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+}
+
+// The menu uses position:fixed (so it can't be clipped by any ancestor's
+// overflow), so its coordinates need to be computed from the button here.
+function positionMoreMenu() {
+  const rect = moreMenuBtn.getBoundingClientRect();
+  moreMenuList.style.top = `${rect.bottom + 6}px`;
+  moreMenuList.style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
 }
 
 function closeMoreMenu() {

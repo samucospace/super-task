@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -67,9 +67,7 @@
       <div class="groups-list" id="groups-list"></div>
     </section>
 
-    <section class="composer-panel auth-protected">
-      <button class="primary-button" id="open-task-modal-btn" type="button">+ Add task</button>
-    </section>
+    <button class="fab-add-task auth-protected" id="open-task-modal-btn" type="button" aria-label="Add task">+</button>
 
     <section class="task-modal auth-protected" id="task-modal" hidden aria-hidden="true">
       <div class="task-modal-backdrop" data-close-task-modal="true"></div>
