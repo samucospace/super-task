@@ -50,6 +50,7 @@ Important:
 4. Add Redirect URLs:
    - http://127.0.0.1:5500 (local dev)
    - https://super-task.samfraser-au.workers.dev (hosted)
+   - supertask://auth-callback (Android app deep link, required for magic-link sign-in to open the installed app instead of the phone's browser)
 5. Open Providers (or Sign In Methods).
 6. Enable Email provider.
 7. Ensure Magic Link / OTP is enabled.

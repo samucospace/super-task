@@ -74,29 +74,30 @@ window.SuperTaskAuth = (() => {
       window.history.replaceState({}, document.title, cleanUrl);
     }
 
-    function readHashParams() {
-      const hash = (window.location.hash || "").replace(/^#/, "");
+    function readHashParams(hashSource) {
+      const hash = (hashSource !== undefined ? hashSource : (window.location.hash || "")).replace(/^#/, "");
       const params = new URLSearchParams(hash);
       return {
         accessToken: params.get("access_token"),
         refreshToken: params.get("refresh_token"),
-        hasAuthHash: /access_token=|refresh_token=|expires_in=|token_type=|provider_token=|provider_refresh_token=|error=/.test(window.location.hash || "")
+        hasAuthHash: /access_token=|refresh_token=|expires_in=|token_type=|provider_token=|provider_refresh_token=|error=/.test(hash)
       };
     }
 
-    async function processAuthCallbackIfPresent() {
-      const url = new URL(window.location.href);
+    async function processAuthCallbackIfPresent(urlString, options = {}) {
+      const cleanUrl = options.cleanUrl !== false;
+      const url = new URL(urlString || window.location.href);
 
       const authError = url.searchParams.get("error_description") || url.searchParams.get("error");
       if (authError) {
-        clearAuthParamsFromUrl();
+        if (cleanUrl) clearAuthParamsFromUrl();
         return authError;
       }
 
       if (url.searchParams.has("code")) {
-        const result = await client.auth.exchangeCodeForSession(window.location.href);
+        const result = await client.auth.exchangeCodeForSession(url.toString());
         const errorMessage = result.error?.message || null;
-        clearAuthParamsFromUrl();
+        if (cleanUrl) clearAuthParamsFromUrl();
         return errorMessage;
       }
 
@@ -108,27 +109,57 @@ window.SuperTaskAuth = (() => {
           type: authType
         });
         const errorMessage = result.error?.message || null;
-        clearAuthParamsFromUrl();
+        if (cleanUrl) clearAuthParamsFromUrl();
         return errorMessage;
       }
 
-      const hashParams = readHashParams();
+      const hashParams = readHashParams(url.hash);
       if (hashParams.accessToken && hashParams.refreshToken) {
         const result = await client.auth.setSession({
           access_token: hashParams.accessToken,
           refresh_token: hashParams.refreshToken
         });
         const errorMessage = result.error?.message || null;
-        clearAuthParamsFromUrl();
+        if (cleanUrl) clearAuthParamsFromUrl();
         return errorMessage;
       }
 
       // Handle stray callback artifacts that can leave a trailing '?'.
-      if (window.location.search === "?" || hashParams.hasAuthHash) {
+      if (cleanUrl && (window.location.search === "?" || hashParams.hasAuthHash)) {
         clearAuthParamsFromUrl();
       }
 
       return null;
+    }
+
+    function isNativePlatform() {
+      return !!(window.Capacitor?.isNativePlatform?.());
+    }
+
+    async function handleIncomingDeepLink(url) {
+      if (!url || !url.startsWith("supertask://")) return;
+      const errorMessage = await processAuthCallbackIfPresent(url, { cleanUrl: false });
+      const sessionResult = await client.auth.getSession();
+      const session = sessionResult.data?.session || null;
+      setState(createSupabaseState(session, errorMessage || sessionResult.error?.message));
+    }
+
+    async function initNativeDeepLinking() {
+      const appPlugin = window.Capacitor?.Plugins?.App;
+      if (!appPlugin) return;
+
+      appPlugin.addListener("appUrlOpen", ({ url }) => {
+        void handleIncomingDeepLink(url);
+      });
+
+      try {
+        const launch = await appPlugin.getLaunchUrl();
+        if (launch?.url) {
+          await handleIncomingDeepLink(launch.url);
+        }
+      } catch (_) {
+        // No launch URL available; nothing to do.
+      }
     }
 
     async function init() {
@@ -146,7 +177,7 @@ window.SuperTaskAuth = (() => {
         }
       });
 
-      const callbackError = await processAuthCallbackIfPresent();
+      const callbackError = await processAuthCallbackIfPresent(window.location.href);
 
       const sessionResult = await client.auth.getSession();
       const session = sessionResult.data?.session || null;
@@ -157,6 +188,10 @@ window.SuperTaskAuth = (() => {
         setState(createSupabaseState(nextSession));
       });
 
+      if (isNativePlatform()) {
+        await initNativeDeepLinking();
+      }
+
       return currentState;
     }
 
@@ -165,7 +200,9 @@ window.SuperTaskAuth = (() => {
         return { ok: false, message: "Supabase auth is not configured yet." };
       }
 
-      const cleanRedirectUrl = `${window.location.origin}${window.location.pathname}`;
+      const cleanRedirectUrl = isNativePlatform()
+        ? "supertask://auth-callback"
+        : `${window.location.origin}${window.location.pathname}`;
 
       const result = await client.auth.signInWithOtp({
         email,
