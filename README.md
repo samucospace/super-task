@@ -6,18 +6,19 @@ Live deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Workers
 
 ## Highlights
 
-- Add, edit, complete, and delete tasks in a spreadsheet-like table
-- Drag and drop rows to reorder tasks in manual mode
+- Add, edit, complete, and delete tasks via a floating "+" button that opens a task editor popup (works the same on web and Android)
+- Drag and drop rows to reorder tasks in manual mode (table view), or drag task cards to reorder within their group (card view)
 - Sort by Group, Due date, or Priority (asc -> desc -> back to manual order)
 - Manage groups (add, rename, delete) from the Groups panel
 - Auto-register groups when you type a new group while creating or editing a task
 - Resize table columns, with widths remembered between sessions
+- Card view groups cards scroll internally once a group has more tasks than fit, instead of clipping them
 - Export and import backups as JSON
 - Delete all completed tasks in one action
 - Persist data with IndexedDB
 - Automatic localStorage fallback when IndexedDB is unavailable
 - Offline support with a service worker and installable PWA manifest
-- Optional Supabase email magic-link sign-in
+- Optional Supabase email magic-link sign-in (including deep-link sign-in on the Android app)
 - Optional cloud sync of tasks/groups, scoped per signed-in user
 - Offline-safe cloud sync: edits made offline or signed-out are queued locally and pushed automatically once signed in and online
 - Realtime sync between open tabs/devices for the same account (no manual refresh needed)
@@ -25,6 +26,7 @@ Live deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Workers
 - Compact header: secondary actions (Export/Import backup, Refresh from cloud, Sign out) live under a single "More ⋮" menu
 - Card view is used automatically on narrow/mobile screens until you explicitly pick a view (your choice is then remembered)
 - Live task/group counts and a group count badge on the Groups toggle for quick at-a-glance status
+- Packaged as a native Android app via Capacitor, with magic-link sign-in working through a custom URL scheme deep link
 
 ## Open The App
 
@@ -37,10 +39,10 @@ The app works fully local-only with no Supabase configuration. Cloud sync is opt
 
 ## How To Use
 
-1. Fill out Task, Group, Due date, and Priority, then select Add task.
-2. Click any row field to edit in place.
+1. Tap the floating "+" button (bottom-right) to open the task editor popup; fill out Task, Group, Due date, Priority, and Notes, then select Add task.
+2. Click any row field to edit in place in table view, or click a task card in card view to reopen the same task editor popup pre-filled for editing.
 3. Toggle completion with the checkbox.
-4. Use the drag handle to reorder tasks (only when sort is in manual mode).
+4. Use the drag handle to reorder tasks in table view (only when sort is in manual mode), or drag a task within its card in card view.
 5. Use column headers to sort and cycle back to manual ordering.
 6. Open Groups to manage saved groups (the button shows a live count of your groups).
 7. Open the "More ⋮" menu for Export backup and Import backup.
@@ -120,4 +122,13 @@ npm run cap:sync      # rebuilds www/ from source files and syncs the android/ p
 npm run android:open  # opens the project in Android Studio
 ```
 
-Run `npm run cap:sync` again any time the web source files change, before opening/building in Android Studio. A command-line `.\android\gradlew.bat assembleDebug` has been verified to succeed with this setup, and the app has launched successfully on an Android Studio virtual device (full feature testing on-device is still pending).
+Run `npm run cap:sync` again any time the web source files change, before opening/building in Android Studio. The app has been built and run successfully on both an emulator and a physical device (Pixel 10 Pro).
+
+### Magic-link sign-in on Android
+
+Tapping a magic-link email on a phone normally opens the phone's browser, not the installed app (they have separate storage). To make sign-in work inside the native app:
+
+- The app registers a custom URL scheme, `supertask://auth-callback`, as an Android intent-filter (`android/app/src/main/AndroidManifest.xml`).
+- `auth.js` sends that URL as the magic-link redirect when running natively (detected via `window.Capacitor.isNativePlatform()`), and uses the `@capacitor/app` plugin's `appUrlOpen`/`getLaunchUrl` to catch the deep link and complete sign-in.
+- You must add `supertask://auth-callback` as a Redirect URL in the Supabase dashboard (Authentication -> URL Configuration) for this to work — see [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
+- This requires a full Android rebuild (not just `npm run www:build`) since it touches `AndroidManifest.xml` and native plugins.

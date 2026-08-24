@@ -15,12 +15,16 @@ Auth shell, session bootstrap, and cloud read/write sync are implemented and tes
 - Local-to-cloud migration: importing a JSON backup (existing Import Backup feature) now also pushes the imported tasks/groups to Supabase when signed in (or queues them via `sync-queue.js` if signed out/offline), so restoring a backup on a fresh sign-in actually migrates that data into the cloud account instead of being silently dropped or overwritten by the next pull.
 - Hosted deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Workers static assets, auto-deploys from `main` via Workers Builds; build command `npm run www:build`, assets directory `www` per `wrangler.jsonc`). Add this URL as a Supabase Auth Redirect URL (see `SUPABASE_SETUP.md`).
 - Android/Capacitor scaffolding: `package.json`, `capacitor.config.json` (appId `com.neworchard.supertask`), `scripts/build-www.js`, and the generated `android/` native project are in place. A command-line debug build (`gradlew assembleDebug`) has been verified to succeed using Android Studio's SDK plus Microsoft Build of OpenJDK 21 as `JAVA_HOME` (the JDK 25 bundled with the Android Studio install is too new for this project's Gradle/AGP versions).
-- The app has been opened in Android Studio (Gradle JDK set to 21) and launched successfully on a virtual device (emulator).
+- The app has been opened in Android Studio (Gradle JDK set to 21) and confirmed working on both a virtual device (emulator) and a physical device (Pixel 10 Pro).
+- Android magic-link sign-in: implemented via a custom URL scheme deep link (`supertask://auth-callback`), the `@capacitor/app` plugin, and an `AndroidManifest.xml` intent-filter, so tapping the magic-link email opens the installed app instead of the phone's browser. Confirmed working end-to-end on the physical device. Requires `supertask://auth-callback` to also be added as a Supabase Auth Redirect URL.
+- Task creation/editing UI: the always-visible composer was replaced with a floating "+" button (fixed bottom-right, all devices) that opens a single-column popup modal for adding or editing a task; clicking a task card in card view opens the same modal pre-filled for editing.
+- Card view improvements: drag-to-reorder within a card (manual sort mode), and internal scrolling for groups with more tasks than fit (instead of clipping them).
+- Mobile layout fixes: eliminated a stray horizontal scroll (grid overflow + a decorative glow bleeding past the header), and top-of-screen safe-area handling for the Android status bar via a fixed (non-scrolling) spacer strip.
 
 Not yet implemented (see `IMPLEMENTATION_ROADMAP.md` for sequencing):
 
-- Full in-app testing pass on the emulator/device (sign-in, task/group CRUD, offline queue, sync, card/table modes, notes) — app launches but hasn't been exercised yet.
-- Testing on a real physical device, icon/splash branding, and Play Store release prep.
+- Custom app icon/splash screen (currently using Capacitor defaults) and Play Store release prep (signing, listing, etc.).
+- A full systematic in-app test pass covering every feature on Android (spot-testing has been done; sign-in, task/group CRUD, and the new modal/card interactions have been exercised).
 
 ## Goal
 
@@ -329,6 +333,6 @@ Auth planning becomes auth implementation complete when:
 
 ## Suggested Next Build Task
 
-Auth + read/write cloud sync + offline queue + realtime sync + timestamp-aware conflict handling + backup-import cloud migration are implemented (see Status section above). Recommended next slice:
+Auth + read/write cloud sync + offline queue + realtime sync + timestamp-aware conflict handling + backup-import cloud migration + hosted deployment + Android packaging (including deep-link magic-link sign-in) are implemented (see Status section above). Recommended next slice:
 
-1. Hosted deployment + Android/Capacitor packaging per `IMPLEMENTATION_ROADMAP.md`.
+1. Custom app icon/splash screen and Play Store release prep (signing, listing, store assets).

@@ -27,7 +27,9 @@ Super Task is a task board app built from static files, local-first by default w
 - `scripts/build-www.js`: copies just the runtime web files into `www/` (gitignored, regenerated via `npm run www:build`).
 - `android/`: generated native Android Studio project, tracked in git per Capacitor convention.
 - `npm run cap:sync` rebuilds `www/` and syncs `android/`; `npm run android:open` also opens Android Studio.
-- Building/running on Android requires Android Studio + a JDK installed locally (not yet done as of this scaffolding).
+- Confirmed working on a physical device (Pixel 10 Pro) and an emulator, including magic-link sign-in.
+- Magic-link sign-in uses a custom URL scheme deep link (`supertask://auth-callback`, `@capacitor/app` plugin, intent-filter in `AndroidManifest.xml`) so tapping the email link opens the installed app instead of the phone's browser — see `auth.js`'s `isNativePlatform()`/`initNativeDeepLinking()`. Requires `supertask://auth-callback` to also be added as a Supabase Auth Redirect URL. Changes to `AndroidManifest.xml` or native plugins need a full Android rebuild, not just `npm run www:build`.
+- Top-of-screen safe-area (status bar) handling uses a `position: fixed` spacer strip (`.safe-area-top-spacer`) sized via `env(safe-area-inset-top)`, not `body` padding — padding on a scrolling element scrolls away and re-exposes content under the status bar.
 
 ## Core Product Behaviors
 
@@ -35,11 +37,13 @@ Super Task is a task board app built from static files, local-first by default w
 - Task fields: title, group, due date, priority, completion, notes
 - Notes support up to 1000 characters
 - Notes editing uses compact preview + popup editor + Done/ESC/blur close
-- Manual drag-and-drop ordering when sort mode is manual
+- Manual drag-and-drop ordering when sort mode is manual (table rows), or within a card in card view (same manual-order model, restricted to same-group drops)
 - Sort cycle on sortable columns: asc -> desc -> manual order
 - Group management panel (add/rename/delete); the Groups toggle button shows a live count badge
 - Export/import backup as JSON, accessible from the "More ⋮" header menu (along with Refresh from cloud / Sign out once signed in)
 - Delete completed tasks action
+- Task creation/editing happens in a single popup modal (single-column form: Task, Group, Due date, Priority, Notes), opened via a floating "+" button fixed at the bottom-right (all devices) for adding, or by clicking a task card in card view for editing
+- Card view groups scroll internally (max-height + `overflow-y: auto` on the task list) once a group has more tasks than fit, instead of clipping them
 - Card view is used automatically on narrow/mobile screens until the user explicitly toggles the view once; their choice is then remembered
 - Header keeps routine status pills hidden (e.g. storage-status only shows for an actual problem) and shows a single combined "Logged in - your@email.com" pill once signed in
 
@@ -82,6 +86,7 @@ Super Task is a task board app built from static files, local-first by default w
 - Any new task/group mutation path must also queue for offline sync when not signed in or when the cloud write fails (see `cloudUpsertTasks`/`cloudDeleteTasks`/`cloudUpsertGroup`/`cloudDeleteGroup` in `app.js`).
 - When any code reindexes/renumbers multiple tasks locally (e.g. inserting above completed tasks, deleting and shifting survivors), push the full updated task list to cloud, not just the single changed task, or other rows' `sort_order` goes stale (see `addTask`/`deleteTask`/`deleteCompletedTasks` in `repositories.js`).
 - CSS gotcha: an element toggled via the `hidden` DOM property in JS won't actually hide if its CSS rule also sets an explicit `display` (e.g. `display: grid/flex`) without a matching `.your-class[hidden] { display: none; }` override - the explicit `display` wins over the browser's default `[hidden]` rule.
+- CSS gotcha: don't use scrolling-element padding (e.g. `body { padding-top: env(safe-area-inset-top) }`) to avoid drawing under the Android status bar - it scrolls away with the content. Use a `position: fixed` spacer element instead (see `.safe-area-top-spacer`).
 
 ## Quick Validation Checklist
 

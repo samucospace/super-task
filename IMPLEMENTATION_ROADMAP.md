@@ -42,11 +42,13 @@ The app already has:
 - Realtime sync between open tabs/devices via Supabase Realtime `postgres_changes`, and timestamp-aware per-record conflict merging on every cloud pull
 - Local-to-cloud migration via the existing Import Backup flow, which now also pushes imported data to Supabase when signed in
 - Hosted production deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Workers static assets, auto-deploys from `main`)
-- Android/Capacitor project scaffolding (`package.json`, `capacitor.config.json`, `scripts/build-www.js`, generated `android/` project)
+- Android/Capacitor packaging confirmed working on a physical device (Pixel 10 Pro) and an emulator, including a deep-link (`supertask://auth-callback`) magic-link sign-in flow so the email link opens the installed app instead of the phone's browser
+- Task creation/editing via a floating "+" button and single-column popup modal (replaces the old always-visible composer), reused for editing tasks from card view
+- Card view drag-to-reorder within a card, and internal scrolling for groups with more tasks than fit
 
 The app does not yet have:
 
-- Android Studio + JDK installed on the dev machine, so no real device/emulator build has been done yet
+- Custom Android app icon/splash screen (using Capacitor defaults) and Play Store release prep
 - Full production security hardening pass (Phase 9)
 
 ## MVP Definition
@@ -303,15 +305,13 @@ Reuse the web app as a branded Android app with minimal duplication.
 
 Scaffolding done: `package.json` + Capacitor devDependencies, `capacitor.config.json` (appId `com.neworchard.supertask`, appName "Super Task", `webDir: "www"`), `scripts/build-www.js` (copies just the runtime web files into `www/` for packaging), and the generated `android/` native project (tracked in git per Capacitor convention).
 
-Android Studio + SDK are installed, and a command-line debug build (`gradlew assembleDebug`) succeeds using Microsoft Build of OpenJDK 21 as `JAVA_HOME` (the newer JDK 25 bundled with Android Studio itself is too new for this project's Gradle 8.11/AGP 8.7 and fails with "Unsupported class file major version 69"). The app has also been opened in Android Studio (with Gradle JDK set to 21) and launched successfully on a virtual device.
+Android Studio + SDK are installed, and a command-line debug build (`gradlew assembleDebug`) succeeds using Microsoft Build of OpenJDK 21 as `JAVA_HOME` (the newer JDK 25 bundled with Android Studio itself is too new for this project's Gradle 8.11/AGP 8.7 and fails with "Unsupported class file major version 69"). The app has been opened in Android Studio (with Gradle JDK set to 21) and confirmed working on both a virtual device and a physical device (Pixel 10 Pro).
+
+Magic-link sign-in works on-device via a custom URL scheme deep link (`supertask://auth-callback`, `@capacitor/app` plugin, `AndroidManifest.xml` intent-filter) so the email link opens the installed app instead of the phone's browser, instead of authenticating an unrelated browser session. Mobile-specific UI issues (horizontal scroll, status-bar overlap, floating "+" add-task button, card view scrolling/drag-reorder) have also been fixed.
 
 Still to do:
 
-1. Full in-app testing pass on the emulator (and a real device):
-   - login/session persistence
-   - offline behavior
-   - sync after reconnect
-   - modal/table/card interactions
+1. A full systematic in-app testing pass on a real device (spot-testing of sign-in, CRUD, and the new modal/card interactions has been done, but not an exhaustive pass covering offline/reconnect edge cases).
 2. Set custom icons/splash screen (currently using Capacitor defaults).
 3. Generate a signed APK/AAB for release.
 
@@ -384,9 +384,9 @@ Local-data migration into the authenticated account, via the existing Import Bac
 
 Deploy the hosted web version: https://super-task.samfraser-au.workers.dev (Cloudflare Workers static assets, auto-deploys from `main` via Workers Builds; build command `npm run www:build`, assets directory `www` per `wrangler.jsonc`). Requires this URL to also be added as a Supabase Auth Redirect URL (see `SUPABASE_SETUP.md`).
 
-### Milestone 6 — In progress
+### Milestone 6 — Mostly done
 
-Add Capacitor and build the Android MVP. Project scaffolding is done, a command-line debug build succeeds (`gradlew assembleDebug`, using JDK 21), and the app launches successfully on an emulator in Android Studio. Remaining: full feature testing pass, a real-device test, custom icons, and release prep.
+Add Capacitor and build the Android MVP. Project scaffolding is done, a command-line debug build succeeds (`gradlew assembleDebug`, using JDK 21), and the app is confirmed working on both an emulator and a physical device (Pixel 10 Pro), including deep-link magic-link sign-in. Remaining: a more exhaustive testing pass, custom icons, and release prep.
 
 ### Milestone 7 — Not started
 
@@ -394,9 +394,9 @@ Harden security, test thoroughly, and prepare release.
 
 ## Recommended First Coding Step
 
-Milestones 1-5 (storage abstraction, auth, hybrid sync with realtime + conflict handling, local-to-cloud migration via backup import, and hosted deployment) are complete — see `AUTH_IMPLEMENTATION_PLAN.md` for the detailed status.
+Milestones 1-6 (storage abstraction, auth, hybrid sync with realtime + conflict handling, local-to-cloud migration via backup import, hosted deployment, and Android packaging with deep-link auth) are complete — see `AUTH_IMPLEMENTATION_PLAN.md` for the detailed status.
 
-Milestone 6 (Capacitor/Android) is scaffolded; the next step is installing Android Studio + a JDK and doing a first real build.
+The next step is Milestone 7: custom app icon/splash screen, then security hardening and Play Store release prep.
 
 ## Suggested Repo Evolution
 

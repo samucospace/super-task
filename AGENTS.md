@@ -25,6 +25,9 @@ This guide helps coding agents work quickly and safely in Super Task.
 - `scripts/build-www.js`: copies just the runtime web files (not docs/tooling) into `www/` (gitignored, regenerated on demand).
 - `android/`: generated native project, tracked in git.
 - If you edit any runtime web file, remember `www/` and `android/app/src/main/assets/public` are stale copies — run `npm run cap:sync` before building/opening Android Studio. This has no effect on the browser app.
+- Confirmed working on a physical device (Pixel 10 Pro) and an emulator, including magic-link sign-in.
+- Magic-link sign-in uses a custom URL scheme deep link (`supertask://auth-callback`, `@capacitor/app` plugin, intent-filter in `AndroidManifest.xml`) so tapping the email link opens the installed app instead of the phone's browser — see `auth.js`'s `isNativePlatform()`/`initNativeDeepLinking()`. Requires `supertask://auth-callback` to also be added as a Supabase Auth Redirect URL. Changes to `AndroidManifest.xml` or native plugins need a full Android rebuild, not just `npm run www:build`.
+- Top-of-screen safe-area (status bar) handling uses a `position: fixed` spacer strip (`.safe-area-top-spacer`) sized via `env(safe-area-inset-top)`, not `body` padding — padding on a scrolling element scrolls away and re-exposes content under the status bar.
 
 ## Agent Priorities
 
@@ -72,10 +75,16 @@ Task shape (logical):
   - Table columns are user-resizable (persisted); defaults are intentionally compact so the table fits typical laptop widths without horizontal scrolling.
 - Card mode:
   - One card per group.
-  - Cards size dynamically by open-task count.
+  - Cards size dynamically by open-task count, up to a max height; a group's task list scrolls internally once it has more tasks than fit, instead of clipping them.
   - Completed tasks are not shown in card mode.
-  - Clicking a card opens a modal with that group task list.
-  - Used automatically on narrow/mobile screens (\u2264700px) until the user explicitly toggles the view once; after that their choice is remembered in `localStorage`.
+  - Clicking a task within a card opens the task editor modal to edit that task; clicking elsewhere on the card (header, empty space) opens the group modal with that group's task list.
+  - Dragging a task within the same card reorders it (manual sort mode only); dropping onto a different group's card is ignored.
+  - Used automatically on narrow/mobile screens (≤700px) until the user explicitly toggles the view once; after that their choice is remembered in `localStorage`.
+- Task editor modal:
+  - A floating "+" button (fixed bottom-right, all devices) opens the modal in "Add task" mode.
+  - Clicking a task in card mode opens the same modal in "Edit task" mode, pre-filled.
+  - Single-column form (Task, Group, Due date, Priority, Notes); the Notes field keeps the existing compact preview + popup editor pattern.
+  - Closes via close button, backdrop click, or Escape; submitting calls `repositories.addTask` (create) or `repositories.persistTaskWithGroup` (edit).
 - Group modal:
   - Table-style editing for only that group.
   - Add task to group action in modal header.
