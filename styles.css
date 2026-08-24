@@ -1265,13 +1265,18 @@ tr.is-complete .task-date-input {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .hero-panel,
   .groups-panel,
   .board-panel {
     animation: rise-in 260ms ease-out both;
   }
 
+  /* .hero-panel contains the More menu's position:fixed dropdown - any
+     transform here (even a lingering translateY(0) from fill-mode:both)
+     would make it a containing block for that fixed element, breaking
+     viewport-relative positioning and clipping it via overflow:hidden.
+     Use an opacity-only fade instead of rise-in-fade so it never gets one. */
   .hero-panel {
+    animation: fade-in 260ms ease-out both;
     animation-delay: 20ms;
   }
 
@@ -1287,6 +1292,15 @@ tr.is-complete .task-date-input {
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 }
