@@ -420,7 +420,7 @@ function setAuthMessage(message, isError) {
 }
 
 async function loadCloudDataForUser(userId, previousUserId, options = {}) {
-  const { silent = false } = options;
+  const { silent = false, retriesLeft = 2 } = options;
   const client = authService.getClient();
   if (!client || !userId) return;
 
@@ -479,6 +479,17 @@ async function loadCloudDataForUser(userId, previousUserId, options = {}) {
     cloudBootstrapUserId = userId;
   } catch (err) {
     console.error("Cloud bootstrap failed.", err);
+    // On Android, the WebView's network stack can still be warming up right
+    // after a cold start, so the very first request after launch sometimes
+    // fails even though connectivity is fine moments later. Retry silently
+    // a couple of times before surfacing an error to the user.
+    if (retriesLeft > 0) {
+      cloudBootstrapInFlight = false;
+      setTimeout(() => {
+        void loadCloudDataForUser(userId, previousUserId, { silent, retriesLeft: retriesLeft - 1 });
+      }, 1500);
+      return;
+    }
     if (!silent) {
       setAuthMessage(`Signed in, but cloud load failed: ${err.message || "Unknown error"}. Using local data.`, true);
       setStorageStatus("Cloud load failed, using local data", true);
