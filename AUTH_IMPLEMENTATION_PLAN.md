@@ -17,9 +17,11 @@ Auth shell, session bootstrap, and cloud read/write sync are implemented and tes
 - Android/Capacitor scaffolding: `package.json`, `capacitor.config.json` (appId `com.neworchard.supertask`), `scripts/build-www.js`, and the generated `android/` native project are in place. A command-line debug build (`gradlew assembleDebug`) has been verified to succeed using Android Studio's SDK plus Microsoft Build of OpenJDK 21 as `JAVA_HOME` (the JDK 25 bundled with the Android Studio install is too new for this project's Gradle/AGP versions).
 - The app has been opened in Android Studio (Gradle JDK set to 21) and confirmed working on both a virtual device (emulator) and a physical device (Pixel 10 Pro).
 - Android magic-link sign-in: implemented via a custom URL scheme deep link (`supertask://auth-callback`), the `@capacitor/app` plugin, and an `AndroidManifest.xml` intent-filter, so tapping the magic-link email opens the installed app instead of the phone's browser. Confirmed working end-to-end on the physical device. Requires `supertask://auth-callback` to also be added as a Supabase Auth Redirect URL.
+- Android first-open cloud-sync reliability: cloud bootstrap now auto-retries briefly when the first fetch fails right after cold launch (WebView startup timing), so users typically no longer need to close/reopen to get sync.
 - Task creation/editing UI: the always-visible composer was replaced with a floating "+" button (fixed bottom-right, all devices) that opens a single-column popup modal for adding or editing a task; clicking a task card in card view opens the same modal pre-filled for editing.
 - Card view improvements: drag-to-reorder within a card (manual sort mode), and internal scrolling for groups with more tasks than fit (instead of clipping them).
 - Mobile layout fixes: eliminated a stray horizontal scroll (grid overflow + a decorative glow bleeding past the header), and top-of-screen safe-area handling for the Android status bar via a fixed (non-scrolling) spacer strip.
+- More-menu visibility fix: the dropdown remains `position: fixed` with JS-computed coordinates, and `.hero-panel` now uses a transform-free fade animation to avoid creating a containing block that could clip the menu.
 
 Not yet implemented (see `IMPLEMENTATION_ROADMAP.md` for sequencing):
 

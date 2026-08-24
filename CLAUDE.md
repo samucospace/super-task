@@ -56,6 +56,7 @@ Super Task is a task board app built from static files, local-first by default w
 - Cloud is treated as the source of truth once signed in: every sign-in / app load / manual "Refresh from cloud" pulls tasks/groups for that `user_id` and overwrites local state.
 - Every task/group create/update/delete is pushed to Supabase (`tasks`/`groups` tables) immediately after the local write, scoped by `user_id`, using soft deletes (`deleted_at`).
 - Offline/signed-out edits are captured by a persistent local queue (`sync-queue.js`, localStorage key `super-task-sync-queue`) and flushed automatically: on reconnect (`online` event), on a 30s timer, and before every cloud pull (so local edits push before being possibly overwritten).
+- Android cold-start edge case: initial signed-in cloud bootstrap now retries automatically if the first request fails right after app launch (WebView network stack warm-up timing), reducing first-open sync failures.
 - Pending-sync UI: header pill ("N changes pending sync") plus a small amber marker on affected task rows.
 - Realtime sync: while signed in, the app subscribes to Supabase Realtime `postgres_changes` on `tasks`/`groups` (filtered by `user_id`) and does a debounced (~500ms) silent re-pull when another tab/device changes data. Requires Realtime enabled on both tables (see `SUPABASE_SETUP.md`).
 - Conflict handling: each task/group carries an `updatedAt` set on every push. Cloud pulls merge per-record by comparing `updatedAt` (newer side wins) instead of blanket-overwriting local state; any local row that wins gets re-pushed to reconcile. Still whole-row, not field-level.
@@ -87,6 +88,7 @@ Super Task is a task board app built from static files, local-first by default w
 - When any code reindexes/renumbers multiple tasks locally (e.g. inserting above completed tasks, deleting and shifting survivors), push the full updated task list to cloud, not just the single changed task, or other rows' `sort_order` goes stale (see `addTask`/`deleteTask`/`deleteCompletedTasks` in `repositories.js`).
 - CSS gotcha: an element toggled via the `hidden` DOM property in JS won't actually hide if its CSS rule also sets an explicit `display` (e.g. `display: grid/flex`) without a matching `.your-class[hidden] { display: none; }` override - the explicit `display` wins over the browser's default `[hidden]` rule.
 - CSS gotcha: don't use scrolling-element padding (e.g. `body { padding-top: env(safe-area-inset-top) }`) to avoid drawing under the Android status bar - it scrolls away with the content. Use a `position: fixed` spacer element instead (see `.safe-area-top-spacer`).
+- CSS gotcha: if a `position: fixed` dropdown/popover is nested under an ancestor with `transform`/`filter`/`perspective`/`will-change`, it can stop being viewport-relative and get clipped by ancestor overflow. This can come from animation end-states too (`animation-fill-mode: both/forwards` leaving a transform).
 
 ## Quick Validation Checklist
 

@@ -57,6 +57,7 @@ Task shape (logical):
 - Signed-in: cloud is treated as source of truth. Every sign-in / app load / manual "Refresh from cloud" pulls tasks/groups for that user and overwrites local state.
 - Every task/group mutation pushes to Supabase immediately (soft delete via `deleted_at`), scoped by `user_id`.
 - Offline or signed-out edits are queued locally (`sync-queue.js`) and auto-flushed on reconnect, on a timer, and before any cloud pull.
+- Android cold-start edge case: initial signed-in cloud bootstrap now retries automatically if the first fetch fails shortly after launch (to avoid requiring a close/reopen cycle).
 - Header shows a "N changes pending sync" pill and rows get an amber marker when unsynced.
 - Realtime cross-tab/device push via Supabase Realtime `postgres_changes` subscriptions (requires Realtime enabled on `tasks`/`groups` tables).
 - Timestamp-aware per-record conflict merging on every cloud pull (an `updatedAt`-newer local row survives a pull instead of being blanket-overwritten); conflicts are still whole-row (not field-level).
@@ -104,6 +105,7 @@ Task shape (logical):
 - When adding controls, wire both click and keyboard behavior where relevant.
 - Keep CSS aligned with existing tokenized style in `:root`.
 - Gotcha: if an element is shown/hidden via the `hidden` DOM property/attribute in JS, and its CSS rule sets an explicit `display` (e.g. `display: grid/flex`), that overrides the browser's default `[hidden] { display: none }` and the element never actually hides. Add a matching `.your-class[hidden] { display: none; }` rule (see `.table-frame[hidden]`, `.group-modal[hidden]`, `.auth-gate[hidden]`, `.more-menu-list[hidden]` for the existing pattern).
+- Gotcha: any ancestor `transform`/`filter`/`perspective`/`will-change` can break a nested `position: fixed` popover by creating a containing block. This includes transforms left behind by CSS animations with `animation-fill-mode: both/forwards` (for example, the More menu was invisible when `.hero-panel` kept a post-animation transform and clipped the fixed dropdown via `overflow: hidden`).
 
 ## Validation Checklist (After Changes)
 

@@ -43,8 +43,10 @@ The app already has:
 - Local-to-cloud migration via the existing Import Backup flow, which now also pushes imported data to Supabase when signed in
 - Hosted production deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Workers static assets, auto-deploys from `main`)
 - Android/Capacitor packaging confirmed working on a physical device (Pixel 10 Pro) and an emulator, including a deep-link (`supertask://auth-callback`) magic-link sign-in flow so the email link opens the installed app instead of the phone's browser
+- Android cold-start sync reliability improvement: first signed-in cloud bootstrap now auto-retries if the initial request fails shortly after launch
 - Task creation/editing via a floating "+" button and single-column popup modal (replaces the old always-visible composer), reused for editing tasks from card view
 - Card view drag-to-reorder within a card, and internal scrolling for groups with more tasks than fit
+- More-menu stability: dropdown remains fixed-position with JS coordinates, and header animation avoids transform-based end states that can clip nested fixed popovers
 
 The app does not yet have:
 

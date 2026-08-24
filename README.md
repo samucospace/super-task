@@ -56,6 +56,7 @@ See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for full setup steps. In short:
 - Sign in with the magic-link form in the app header.
 - While signed in, the cloud copy (Supabase `tasks`/`groups` tables) is treated as the source of truth: every app load / sign-in pulls the latest cloud data, and every local task/group edit is pushed to the cloud immediately.
 - If offline or signed out, edits are saved locally and queued; a "N changes pending sync" indicator shows in the header, and affected rows get a small amber marker. Queued changes push automatically once you're back online and signed in (also retried on a timer and on browser reconnect), or you can use "Refresh from cloud" (in the "More ⋮" menu) / re-visit the app to trigger a push+pull.
+- On Android cold app launches, initial cloud bootstrap now auto-retries briefly if the first request fails (a WebView startup timing edge case), so users usually do not need to close/reopen the app.
 - Once signed in, the header shows a single combined "Logged in - your@email.com" pill; "Refresh from cloud" and "Sign out" live in the "More ⋮" menu.
 - While signed in, other open tabs/devices on the same account are notified of changes via Supabase Realtime and refresh automatically (requires Realtime enabled on the `tasks`/`groups` tables; see [SUPABASE_SETUP.md](SUPABASE_SETUP.md)).
 - Each task/group tracks an `updatedAt` timestamp; cloud pulls merge per-record instead of blanket-overwriting, so a more recently edited local row survives a pull from slightly older cloud data.
@@ -123,6 +124,8 @@ npm run android:open  # opens the project in Android Studio
 ```
 
 Run `npm run cap:sync` again any time the web source files change, before opening/building in Android Studio. The app has been built and run successfully on both an emulator and a physical device (Pixel 10 Pro).
+
+Note: browser deploys do not auto-update an installed Android build. After web code changes, run `npm run cap:sync`, rebuild in Android Studio, and reinstall/update the app.
 
 ### Magic-link sign-in on Android
 
