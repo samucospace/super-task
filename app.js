@@ -639,9 +639,17 @@ async function cloudUpsertTasks(tasks) {
 
   try {
     const rows = tasks.map(task => toCloudTaskRow(task, ctx.userId));
-    const result = await ctx.client.from("tasks").upsert(rows, { onConflict: "id" });
+    const result = await ctx.client.from("tasks").upsert(rows, { onConflict: "id" }).select("id, updated_at");
     if (result.error) throw result.error;
-    tasks.forEach(task => window.SuperTaskSyncQueue.removeOps("task", task.id));
+    // A DB trigger sets the real updated_at server-side, which can differ
+    // from our client-clock guess above. Adopt the server's value locally so
+    // clock skew can't make the next cloud pull think this row is still a
+    // "local win" and re-push it again, causing an endless realtime loop.
+    const returnedById = new Map((result.data || []).map(row => [row.id, row.updated_at]));
+    tasks.forEach(task => {
+      if (returnedById.has(task.id)) task.updatedAt = returnedById.get(task.id);
+      window.SuperTaskSyncQueue.removeOps("task", task.id);
+    });
   } catch (err) {
     console.error("Cloud task upsert failed, queued for retry.", err);
     tasks.forEach(task => window.SuperTaskSyncQueue.enqueue("task", task.id, "upsert", task));
@@ -690,8 +698,12 @@ async function cloudUpsertGroup(group) {
 
   try {
     const row = toCloudGroupRow(group, ctx.userId);
-    const result = await ctx.client.from("groups").upsert(row, { onConflict: "id" });
+    const result = await ctx.client.from("groups").upsert(row, { onConflict: "id" }).select("id, updated_at");
     if (result.error) throw result.error;
+    // Adopt the server's trigger-set updated_at (see cloudUpsertTasks) so
+    // clock skew can't cause a perpetual re-push/realtime-pull loop.
+    const returnedRow = (result.data || [])[0];
+    if (returnedRow) group.updatedAt = returnedRow.updated_at;
     window.SuperTaskSyncQueue.removeOps("group", group.id);
   } catch (err) {
     console.error("Cloud group upsert failed, queued for retry.", err);
@@ -1489,6 +1501,15 @@ function createTaskRow(task, options) {
 }
 
 function renderGroupCards(tasks) {
+  // Every render fully rebuilds the card DOM, which would otherwise reset
+  // each card's internal scroll position back to 0 — capture and restore it
+  // per group so re-renders (e.g. a realtime pull) don't yank the view.
+  const scrollByGroup = new Map();
+  groupCardBoard.querySelectorAll(".group-card-task-list").forEach(list => {
+    const groupName = list.closest(".group-card")?.dataset.groupName;
+    if (groupName !== undefined && list.scrollTop > 0) scrollByGroup.set(groupName, list.scrollTop);
+  });
+
   groupCardBoard.innerHTML = "";
 
   const openTasks = tasks.filter(task => !task.completed);
@@ -1597,6 +1618,8 @@ function renderGroupCards(tasks) {
     card.appendChild(header);
     card.appendChild(list);
     groupCardBoard.appendChild(card);
+
+    if (scrollByGroup.has(groupName)) list.scrollTop = scrollByGroup.get(groupName);
   }
 }
 
