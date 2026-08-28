@@ -966,12 +966,20 @@ h1 {
   box-shadow: inset 3px 0 0 var(--color-accent-amber);
 }
 
-tr.task-overdue {
-  background: rgba(239, 68, 68, 0.14);
+.task-table tbody tr.task-overdue {
+  background: rgba(239, 68, 68, 0.22);
 }
 
-tr.task-due-today {
-  background: rgba(34, 197, 94, 0.14);
+.task-table tbody tr.task-due-today {
+  background: rgba(34, 197, 94, 0.22);
+}
+
+.task-table tbody tr.task-overdue:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.task-table tbody tr.task-due-today:hover {
+  background: rgba(34, 197, 94, 0.3);
 }
 
 .drop-above td {
