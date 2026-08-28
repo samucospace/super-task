@@ -1465,6 +1465,10 @@ function createTaskRow(task, options) {
   row.setAttribute("draggable", isManual ? "true" : "false");
   row.classList.toggle("is-complete", task.completed);
 
+  const dueStatus = dueStatusFor(task);
+  row.classList.toggle("task-overdue", dueStatus === "overdue");
+  row.classList.toggle("task-due-today", dueStatus === "due-today");
+
   const isPendingSync = isCloudSyncEnabled() && window.SuperTaskSyncQueue.isPending("task", task.id);
   row.classList.toggle("row-pending-sync", isPendingSync);
   if (isPendingSync) row.title = "Not yet synced to cloud";
@@ -1573,6 +1577,9 @@ function renderGroupCards(tasks) {
         const item = document.createElement("li");
         item.className = "group-card-task";
         item.classList.toggle("is-complete", task.completed);
+        const cardDueStatus = dueStatusFor(task);
+        item.classList.toggle("task-overdue", cardDueStatus === "overdue");
+        item.classList.toggle("task-due-today", cardDueStatus === "due-today");
         item.dataset.taskId = task.id;
         item.dataset.groupName = groupName;
         item.tabIndex = 0;
@@ -2114,6 +2121,14 @@ function dueProgress(dateValue) {
 function todayString() {
   const d = new Date();
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+function dueStatusFor(task) {
+  if (task.completed || !task.dueDate) return null;
+  const today = todayString();
+  if (task.dueDate < today) return "overdue";
+  if (task.dueDate === today) return "due-today";
+  return null;
 }
 
 function setStorageStatus(msg, warn) {
