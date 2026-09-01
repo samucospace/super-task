@@ -8,7 +8,7 @@ Live deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Workers
 
 - Add, edit, complete, and delete tasks via a floating "+" button that opens a task editor popup (works the same on web and Android)
 - Drag and drop rows to reorder tasks in manual mode (table view), or drag task cards to reorder within their group (card view)
-- Sort by Group, Due date, or Priority (asc -> desc -> back to manual order)
+- Sort by Group, Due date, or Priority in either view; card view has a dedicated sort menu (manual order keeps drag reordering enabled)
 - Manage groups (add, rename, delete) from the Groups panel
 - Auto-register groups when you type a new group while creating or editing a task
 - Resize table columns, with widths remembered between sessions
@@ -43,7 +43,7 @@ The app works fully local-only with no Supabase configuration. Cloud sync is opt
 2. Click any row field to edit in place in table view, or click a task card in card view to reopen the same task editor popup pre-filled for editing.
 3. Toggle completion with the checkbox.
 4. Use the drag handle to reorder tasks in table view (only when sort is in manual mode), or drag a task within its card in card view.
-5. Use column headers to sort and cycle back to manual ordering.
+5. Use column headers to sort and cycle back to manual ordering in table view, or the Sort tasks menu in card view.
 6. Open Groups to manage saved groups (the button shows a live count of your groups).
 7. Open the "More ⋮" menu for Export backup and Import backup.
 8. If cloud sync is configured, sign in with a magic link to sync tasks/groups across devices; once signed in, "Refresh from cloud" and "Sign out" are also in the "More ⋮" menu.

@@ -23,6 +23,8 @@ window.SuperTaskDom = (() => {
       composerNotesCount: doc.querySelector("#composer-notes-count"),
       tableFrame: doc.querySelector(".table-frame"),
       tableBody: doc.querySelector("#task-table-body"),
+      cardViewToolbar: doc.querySelector("#card-view-toolbar"),
+      cardSortSelect: doc.querySelector("#card-sort-select"),
       groupCardBoard: doc.querySelector("#group-card-board"),
       groupModal: doc.querySelector("#group-modal"),
       groupModalTitle: doc.querySelector("#group-modal-title"),

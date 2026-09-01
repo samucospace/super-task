@@ -161,6 +161,18 @@
           <tbody id="task-table-body"></tbody>
         </table>
       </div>
+      <div class="card-view-toolbar" id="card-view-toolbar" hidden>
+        <label for="card-sort-select">Sort tasks</label>
+        <select id="card-sort-select">
+          <option value="order:asc">Manual order</option>
+          <option value="group:asc">Group (A-Z)</option>
+          <option value="group:desc">Group (Z-A)</option>
+          <option value="dueDate:asc">Due date (earliest)</option>
+          <option value="dueDate:desc">Due date (latest)</option>
+          <option value="priority:asc">Priority (highest)</option>
+          <option value="priority:desc">Priority (lowest)</option>
+        </select>
+      </div>
       <div class="group-card-board" id="group-card-board" hidden></div>
       <div class="table-footer">
         <span id="task-count">0 tasks</span>

@@ -76,6 +76,7 @@ Task shape (logical):
   - Table columns are user-resizable (persisted); defaults are intentionally compact so the table fits typical laptop widths without horizontal scrolling.
 - Card mode:
   - One card per group.
+  - A card-view sort menu supports manual order, group order, due date, and priority; sorting tasks by a field applies within each group, while group sorting orders the cards themselves.
   - Cards size dynamically by open-task count, up to a max height; a group's task list scrolls internally once it has more tasks than fit, instead of clipping them.
   - Completed tasks are not shown in card mode.
   - Clicking a task within a card opens the task editor modal to edit that task; clicking elsewhere on the card (header, empty space) opens the group modal with that group's task list.

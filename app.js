@@ -85,6 +85,8 @@ const {
   composerNotesCount,
   tableFrame,
   tableBody,
+  cardViewToolbar,
+  cardSortSelect,
   groupCardBoard,
   groupModal,
   groupModalTitle,
@@ -163,6 +165,7 @@ function attachEventListeners() {
       tableBody,
       deleteCompletedBtn,
       sortButtons,
+      cardSortSelect,
       toggleGroupsBtn,
       toggleViewBtn,
       addGroupForm,
@@ -200,6 +203,7 @@ function attachEventListeners() {
       handleDrop,
       handleDragEnd,
       handleSortClick,
+      handleCardSortChange,
       toggleGroupsPanel,
       toggleViewMode,
       handleAddGroup,
@@ -835,8 +839,10 @@ function applyViewMode(shouldPersist) {
   if (tableFrame && groupCardBoard) {
     if (inCardsMode) {
       tableFrame.setAttribute("hidden", "");
+      cardViewToolbar?.removeAttribute("hidden");
       groupCardBoard.removeAttribute("hidden");
     } else {
+      cardViewToolbar?.setAttribute("hidden", "");
       groupCardBoard.setAttribute("hidden", "");
       tableFrame.removeAttribute("hidden");
     }
@@ -1254,6 +1260,13 @@ function handleSortClick(event) {
   renderTasks();
 }
 
+function handleCardSortChange(event) {
+  const [key, direction] = event.currentTarget.value.split(":");
+  state.sort.key = key;
+  state.sort.direction = direction;
+  renderTasks();
+}
+
 // ── GROUPS PANEL ──────────────────────────────────────────────────────────────
 
 function toggleGroupsPanel() {
@@ -1525,6 +1538,10 @@ function renderGroupCards(tasks) {
   }
 
   const orderedGroups = [...groupsMap.entries()].sort((a, b) => {
+    if (state.sort.key === "group") {
+      const result = a[0].localeCompare(b[0], undefined, { sensitivity: "base" });
+      return state.sort.direction === "desc" ? -result : result;
+    }
     if (b[1].length !== a[1].length) return b[1].length - a[1].length;
     return a[0].localeCompare(b[0], undefined, { sensitivity: "base" });
   });
@@ -1535,10 +1552,11 @@ function renderGroupCards(tasks) {
   }
 
   for (const [groupName, groupTasks] of orderedGroups) {
+    const orderedTasks = state.sort.key === "order" ? groupTasks : sortTaskSubset(groupTasks);
     const card = document.createElement("article");
     card.className = "group-card";
     card.dataset.groupName = groupName;
-    card.style.setProperty("--card-span", String(Math.max(3, Math.min(12, 3 + Math.ceil(groupTasks.length * 1.2)))));
+    card.style.setProperty("--card-span", String(Math.max(3, Math.min(12, 3 + Math.ceil(orderedTasks.length * 1.2)))));
 
     const header = document.createElement("header");
     header.className = "group-card-header";
@@ -1559,7 +1577,7 @@ function renderGroupCards(tasks) {
 
     const count = document.createElement("span");
     count.className = "group-card-count";
-    count.textContent = `${groupTasks.length} task${groupTasks.length === 1 ? "" : "s"}`;
+    count.textContent = `${orderedTasks.length} task${orderedTasks.length === 1 ? "" : "s"}`;
 
     header.appendChild(titleWrap);
     header.appendChild(count);
@@ -1567,13 +1585,13 @@ function renderGroupCards(tasks) {
     const list = document.createElement("ul");
     list.className = "group-card-task-list";
 
-    if (!groupTasks.length) {
+    if (!orderedTasks.length) {
       const empty = document.createElement("li");
       empty.className = "group-card-task-empty";
       empty.textContent = "No tasks in this group";
       list.appendChild(empty);
     } else {
-      for (const task of groupTasks) {
+      for (const task of orderedTasks) {
         const item = document.createElement("li");
         item.className = "group-card-task";
         item.classList.toggle("is-complete", task.completed);
@@ -2032,6 +2050,9 @@ function renderSortState() {
     btn.dataset.active    = active ? "true" : "false";
     btn.dataset.direction = active ? state.sort.direction : "";
   });
+  if (cardSortSelect) {
+    cardSortSelect.value = `${state.sort.key}:${state.sort.direction}`;
+  }
 }
 
 function normalizeNotes(value) {

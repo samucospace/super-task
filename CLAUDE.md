@@ -38,7 +38,7 @@ Super Task is a task board app built from static files, local-first by default w
 - Notes support up to 1000 characters
 - Notes editing uses compact preview + popup editor + Done/ESC/blur close
 - Manual drag-and-drop ordering when sort mode is manual (table rows), or within a card in card view (same manual-order model, restricted to same-group drops)
-- Sort cycle on sortable columns: asc -> desc -> manual order
+- Sort cycle on sortable table columns: asc -> desc -> manual order; card view exposes the same modes in a dedicated sort menu (task fields sort within groups, Group sorts the cards)
 - Group management panel (add/rename/delete); the Groups toggle button shows a live count badge
 - Export/import backup as JSON, accessible from the "More ⋮" header menu (along with Refresh from cloud / Sign out once signed in)
 - Delete completed tasks action

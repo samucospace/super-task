@@ -65,6 +65,9 @@ window.SuperTaskBootstrap = (() => {
     dom.tableBody.addEventListener("drop", handlers.handleDrop);
     dom.tableBody.addEventListener("dragend", handlers.handleDragEnd);
     dom.sortButtons.forEach(btn => btn.addEventListener("click", handlers.handleSortClick));
+    if (dom.cardSortSelect) {
+      dom.cardSortSelect.addEventListener("change", handlers.handleCardSortChange);
+    }
     dom.toggleGroupsBtn.addEventListener("click", handlers.toggleGroupsPanel);
     dom.toggleViewBtn.addEventListener("click", handlers.toggleViewMode);
     dom.addGroupForm.addEventListener("submit", handlers.handleAddGroup);
