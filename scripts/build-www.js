@@ -27,11 +27,25 @@ fs.mkdirSync(WWW_DIR, { recursive: true });
 
 for (const file of RUNTIME_FILES) {
   const src = path.join(ROOT, file);
-  if (!fs.existsSync(src)) {
-    if (file === "auth-config.js") {
-      console.warn(`Skipping missing ${file} (copy auth-config.example.js to auth-config.js first).`);
+
+  if (file === "auth-config.js") {
+    const envUrl = process.env.SUPABASE_URL;
+    const envKey = process.env.SUPABASE_ANON_KEY;
+    if (envUrl && envKey) {
+      const content = `window.SUPER_TASK_SUPABASE_CONFIG = {\n  url: "${envUrl.trim()}",\n  anonKey: "${envKey.trim()}"\n};\n`;
+      fs.writeFileSync(path.join(WWW_DIR, file), content, "utf8");
+      console.log("Generated auth-config.js from SUPABASE_URL and SUPABASE_ANON_KEY environment variables.");
       continue;
     }
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, path.join(WWW_DIR, file));
+      continue;
+    }
+    console.warn(`Skipping missing ${file} (copy auth-config.example.js to auth-config.js first or set SUPABASE_URL / SUPABASE_ANON_KEY).`);
+    continue;
+  }
+
+  if (!fs.existsSync(src)) {
     throw new Error(`Missing required runtime file: ${file}`);
   }
   fs.copyFileSync(src, path.join(WWW_DIR, file));
