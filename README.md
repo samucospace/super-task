@@ -2,7 +2,7 @@
 
 Super Task is a task board that runs directly in the browser from static files, with optional Supabase-backed cloud sync. There is no build step and no package install; it runs standalone locally, or with cloud sync once Supabase is configured.
 
-Live deployment: https://super-task.samfraser-au.workers.dev (Cloudflare Workers static assets, auto-deploys from `main`; build command `npm run www:build`, assets directory `www` per `wrangler.jsonc`)
+**Live deployment**: [https://super-task.samfraser-au.workers.dev](https://super-task.samfraser-au.workers.dev) (Cloudflare Workers static assets, auto-deploys from `main`; build command `npm run www:build`, assets directory `www` per `wrangler.jsonc`)
 
 ## Highlights
 

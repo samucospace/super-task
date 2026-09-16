@@ -1,7 +1,5 @@
-# Local secrets/config that should not be committed in the future
-# (auth-config.js itself stays tracked: it only holds a public-safe Supabase
-# publishable/anon key, and Cloudflare Pages deploys straight from this repo
-# with no build step to inject it otherwise. Add new secret files here instead.)
+# Local secrets/config
+auth-config.js
 
 # OS/editor cruft
 .DS_Store

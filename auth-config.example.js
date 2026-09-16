@@ -1,4 +1,4 @@
 window.SUPER_TASK_SUPABASE_CONFIG = {
-  url: "",
-  anonKey: ""
-};
+  url: "https://your-project-id.supabase.co",
+  anonKey: "your-supabase-anon-key"
+};
