@@ -26,6 +26,9 @@ window.SuperTaskBootstrap = (() => {
       // view on narrow screens instead of the wide table view.
       state.viewMode = "cards";
     }
+    if (state.viewMode === "cards") {
+      state.sort = { key: "dueDate", direction: "asc" };
+    }
     applyViewMode(false);
   }
 

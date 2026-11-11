@@ -8,7 +8,7 @@ Super Task is a task board that runs directly in the browser from static files, 
 
 - Add, edit, complete, and delete tasks via a floating "+" button that opens a task editor popup (works the same on web and Android)
 - Drag and drop rows to reorder tasks in manual mode (table view), or drag task cards to reorder within their group (card view)
-- Sort by Group, Due date, or Priority in either view; card view has a dedicated sort menu (manual order keeps drag reordering enabled)
+- Sort by Group, Due date, or Priority in either view; card view defaults to sorting by Due date (earliest) and has a dedicated sort menu (manual order keeps drag reordering enabled)
 - Manage groups (add, rename, delete) from the Groups panel
 - Auto-register groups when you type a new group while creating or editing a task
 - Resize table columns, with widths remembered between sessions

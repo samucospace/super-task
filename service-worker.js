@@ -1,7 +1,7 @@
 // Super Task Service Worker
 // Enables offline support, caching, and installation as a native-like app
 
-const CACHE_NAME = "super-task-v4";
+const CACHE_NAME = "super-task-v5";
 const ASSETS_TO_CACHE = [
   "./index.html",
   "./styles.css",

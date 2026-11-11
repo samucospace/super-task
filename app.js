@@ -831,6 +831,10 @@ function toggleViewMode() {
 function applyViewMode(shouldPersist) {
   const inCardsMode = state.viewMode === "cards";
 
+  if (inCardsMode) {
+    state.sort = { key: "dueDate", direction: "asc" };
+  }
+
   if (toggleViewBtn) {
     toggleViewBtn.textContent = inCardsMode ? "Table view" : "Card view";
     toggleViewBtn.setAttribute("aria-pressed", inCardsMode ? "true" : "false");

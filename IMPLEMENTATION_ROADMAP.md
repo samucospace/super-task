@@ -50,7 +50,7 @@ The app already has:
 
 The app does not yet have:
 
-- Custom Android app icon/splash screen (using Capacitor defaults) and Play Store release prep
+- Custom Android splash screen and Play Store release prep
 - Full production security hardening pass (Phase 9)
 
 ## MVP Definition
